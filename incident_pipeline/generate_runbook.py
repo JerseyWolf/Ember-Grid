@@ -25,6 +25,10 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 INCIDENTS_DIR = REPO_ROOT / "knowledge-base" / "incidents"
 
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+# Deliberately the smaller coder model, not qwen3:14b.
+# Runbook generation is structured prose + code snippets — qwen2.5-coder is faster
+# and equally capable here. qwen3:14b is reserved for the harder reasoning task in
+# ai_remediation.py where job selection depends on semantic grounding against RAG context.
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
 
 console = Console()
@@ -46,6 +50,8 @@ def _runbook_path(incident: dict) -> Path:
 
 def _enrich_with_ollama(incident: dict, resolution_notes: str) -> str | None:
     """Ask the local LLM for diagnostic steps and prevention notes. None on failure."""
+    # The ---SPLIT--- separator is a reliable parse boundary — less fragile than asking
+    # the model to use JSON or numbered headings, both of which it tends to ignore.
     prompt = f"""You are documenting a Ember Grid incident for the on-call
 knowledge base. Produce TWO short markdown sections, no headings, no extra
 commentary:
@@ -172,7 +178,12 @@ first responder.
 
 
 def _git_commit(file_path: Path, incident: dict) -> None:
-    """Stage and commit the new runbook. Logs but does not raise on failure."""
+    """Stage and commit the new runbook. Logs but does not raise on failure.
+
+    Best-effort only — the runbook is already written to disk. A git failure
+    (no credentials, detached HEAD, nothing staged) must not roll back the incident
+    resolution or crash the pipeline. The file will be picked up on the next manual commit.
+    """
     short = incident.get("short_description", "")
     number = incident.get("number", "")
     message = f"[knowledge-base] auto-generated runbook for {number} — {short}"

@@ -20,8 +20,13 @@ from datetime import datetime, timezone
 MOCK_MODE = os.getenv("MOCK_MODE", "true").lower() == "true"
 
 DEFAULT_DAYS = 30
+# Fixed seed so the dashboard shows consistent numbers between runs.
+# Change via DORA_SEED env var if you want a different noise pattern without code changes.
 RANDOM_SEED = int(os.getenv("DORA_SEED", "42"))
 
+# start/end values are Ember Grid's actual baseline and the 90-day target from the README.
+# deployment_frequency is intentionally flat — the system isn't meant to increase deploy cadence,
+# only to make existing deployments safer. Showing it as "improving" would misrepresent the goal.
 BASELINES = {
     "mttr_hours": {"start": 3.8, "end": 2.1, "noise": 0.25, "direction": "down"},
     "change_failure_rate": {"start": 11.4, "end": 7.0, "noise": 1.0, "direction": "down"},

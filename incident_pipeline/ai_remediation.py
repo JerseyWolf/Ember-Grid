@@ -91,7 +91,9 @@ def _parse_llm_json(text: str) -> dict | None:
     Handles qwen3 <think>...</think> blocks and truncated responses by
     scanning for the first syntactically valid JSON object using raw_decode.
     """
-    # Strip thinking-model chain-of-thought blocks before searching.
+    # qwen3 emits its chain-of-thought inside <think> tags before the actual answer.
+    # These must be stripped first or raw_decode picks up JSON fragments inside the
+    # reasoning text (qwen3 often reasons by writing example JSON, which breaks parsing).
     text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
     text = re.sub(r"<\|thinking\|>.*?<\|/thinking\|>", "", text, flags=re.DOTALL).strip()
 
@@ -100,6 +102,9 @@ def _parse_llm_json(text: str) -> dict | None:
         if ch != "{":
             continue
         try:
+            # raw_decode(text, i) attempts to parse a JSON value starting at index i.
+            # Scanning forward from each '{' handles models that prefix the JSON with
+            # prose like "Here is my recommendation:" before the actual object.
             obj, _ = decoder.raw_decode(text, i)
             if isinstance(obj, dict):
                 return obj
@@ -115,6 +120,9 @@ def _job_by_name(jobs: list[dict], name: str) -> dict | None:
     name when no catalogue entry directly targets the incident's service.
     difflib catches near-misses (e.g. 'trigger-supplier-resync' → the best
     available job) so we degrade gracefully instead of hard-failing.
+
+    cutoff=0.4 is intentionally permissive — better to pick a plausible job and
+    let the confidence gate reject it than to hard-fail and skip remediation entirely.
     """
     normalised = name.strip().lower()
     for job in jobs:
@@ -161,11 +169,16 @@ def _call_ollama(prompt: str) -> str:
     response = client.generate(
         model=OLLAMA_MODEL,
         prompt=prompt,
-        # /no_think disables qwen3's chain-of-thought, which otherwise
-        # consumes ~700-900 hidden tokens out of num_predict and leaves
-        # the visible JSON truncated before the closing brace.
+        # /no_think suppresses qwen3's extended reasoning mode. Without it qwen3 spends
+        # ~700-900 tokens on internal deliberation before producing the JSON, often hitting
+        # num_predict and truncating the closing brace — producing unparseable output.
         system="/no_think",
+        # temperature=0.1: near-deterministic output. We want the same job recommended for
+        # the same incident — not creative variation. Slightly above 0 to avoid degenerate
+        # repetition loops that some quantised models exhibit at temperature=0.
         options={"temperature": 0.1, "num_predict": 2048},
+        # Keep model loaded for 10 minutes after last request to avoid the 9s cold-load
+        # penalty on back-to-back incidents during a pipeline run.
         keep_alive="10m",
     )
     return response.get("response", "")

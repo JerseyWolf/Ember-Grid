@@ -119,7 +119,11 @@ def trigger_job(job_uuid: str, confidence: float, incident_number: str) -> dict:
         }
 
     job_threshold = float(job.get("confidence_threshold", CONFIDENCE_THRESHOLD))
+    # Per-job thresholds can only raise the bar, never lower it below the global floor.
+    # A job with confidence_threshold=0.90 requires 0.90; one with 0.50 still requires 0.70.
     effective_threshold = max(CONFIDENCE_THRESHOLD, job_threshold)
+    # human_review_required overrides confidence entirely — no score can auto-fire these jobs.
+    # Used for trigger-manual-fulfilment-retry (duplicate shipment risk).
     human_review = bool(job.get("human_review_required", False))
 
     if human_review or confidence < effective_threshold:

@@ -1,0 +1,17 @@
+# Ansible inventory for ops-knowledge-loop
+# Copy this file to inventory.ini and fill in the IP from Terraform output:
+#
+#   terraform -chdir=../terraform output ansible_inventory_entry
+#
+# Then run:
+#   ansible-playbook -i inventory.ini playbook.yml
+#
+# To run only a subset of tasks use --tags:
+#   ansible-playbook -i inventory.ini playbook.yml --tags ollama,project
+
+[ember_grid]
+ember-grid-vm ansible_host=<EXTERNAL_IP_FROM_TERRAFORM> ansible_user=ember ansible_ssh_private_key_file=~/.ssh/id_rsa
+
+[ember_grid:vars]
+ansible_python_interpreter=/usr/bin/python3
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'

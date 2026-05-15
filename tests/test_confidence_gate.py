@@ -17,7 +17,10 @@ UNKNOWN_JOB_UUID = "a1b2c3d4-9999-0001-0001-000000000999"
 def call_trigger(job_uuid: str, confidence: float) -> dict:
     trigger_rundeck.MOCK_MODE = True
     with (
+        # Skip the 0.5s artificial latency — tests shouldn't be slow due to time.sleep.
         patch.object(trigger_rundeck.time, "sleep", return_value=None),
+        # If any code path accidentally reaches the real Rundeck API during tests,
+        # blow up loudly rather than silently making an HTTP call against production.
         patch.object(
             trigger_rundeck.requests,
             "post",

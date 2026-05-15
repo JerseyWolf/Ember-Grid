@@ -45,10 +45,10 @@ CHROMA_DB_PATH = Path(os.getenv("CHROMA_DB_PATH", REPO_ROOT / "chroma_db"))
 INCIDENTS_FILE = Path(os.getenv("INCIDENTS_FILE", REPO_ROOT / "mock_data" / "incidents.json"))
 COLLECTION_NAME = "ember-grid-knowledge-base"
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
-CHUNK_SIZE = 500
-CHUNK_OVERLAP = 50
-HEADER_MAX_SIZE = 2000
-HEADER_MIN_SIZE = 100
+CHUNK_SIZE = 500        # characters, not tokens — model-agnostic and fast
+CHUNK_OVERLAP = 50     # overlap prevents splitting a sentence across two chunks that would otherwise miss a query
+HEADER_MAX_SIZE = 2000 # runbook sections rarely exceed this; fallback to character chunking if they do
+HEADER_MIN_SIZE = 100  # sections shorter than this get merged up to avoid embedding near-empty vectors
 
 console = Console()
 
@@ -181,6 +181,10 @@ def select_strategy(path: Path) -> str:
       1. Under knowledge-base/runbooks/ or knowledge-base/systems/ → "header"
       2. Under knowledge-base/incidents/                           → "whole_doc"
       3. Anything else                                             → "character"
+
+    Runbooks are split by heading so each ## section is independently searchable.
+    Incident write-ups are kept whole because splitting destroys the resolution context
+    that the LLM needs to reason about the correct Rundeck job.
     """
     try:
         rel = path.relative_to(KNOWLEDGE_BASE_PATH)
@@ -238,6 +242,7 @@ def reset_collection(client: chromadb.PersistentClient) -> chromadb.Collection:
     return client.create_collection(
         name=COLLECTION_NAME,
         embedding_function=embedding_fn,
+        # cosine similarity is better than L2 for text — document length doesn't skew scores
         metadata={"hnsw:space": "cosine"},
     )
 
@@ -266,7 +271,11 @@ def ingest_file(collection: chromadb.Collection, path: Path) -> int:
 
 
 def build_incident_document(incident: dict) -> str:
-    """Format one incident as searchable text for the RAG corpus."""
+    """Format one incident as searchable text for the RAG corpus.
+
+    Closed incidents include resolution_notes and rundeck_job_used — the most
+    valuable signal for ai_remediation.py when it sees a similar future incident.
+    """
     tags = ", ".join(str(tag) for tag in incident.get("tags", []))
     lines = [
         f"[{incident.get('number', '')}] {incident.get('short_description', '')}",

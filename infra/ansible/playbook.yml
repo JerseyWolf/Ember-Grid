@@ -1,0 +1,1312 @@
+---
+# =============================================================================
+# Ember Grid — ops-knowledge-loop environment provisioning playbook
+#
+# Tested against: Ubuntu 22.04 LTS, NVIDIA L4 (g2-standard-8)
+# Run: ansible-playbook -i inventory.ini playbook.yml
+# Tags available (run subsets with --tags):
+#   base, gpu, python, ollama, docker, elasticsearch, redis,
+#   nginx, observability, opa, rundeck, project, services
+# =============================================================================
+
+- name: Ember Grid — ops-knowledge-loop full environment setup
+  hosts: ember_grid
+  become: true
+  gather_facts: true
+
+  vars:
+    # ----- identity -----
+    ember_user: ember
+    ember_home: /home/ember
+    project_dir: /opt/ember-grid
+
+    # ----- data disk -----
+    data_device: /dev/disk/by-id/google-ember-grid-data
+    data_mount: /data
+
+    # ----- Python -----
+    python_version: "3.11"
+    venv_dir: "{{ project_dir }}/.venv"
+
+    # ----- Ollama -----
+    # Primary reasoning model. qwen3:14b Q4_K_M is 9.3 GB and fits the L4's 24 GB VRAM.
+    # Future: upgrade to qwen3:32b (requires two L4s or an A100) as the corpus grows.
+    ollama_primary_model: "qwen3:14b"
+    # Coder model used by generate_runbook.py for auto-runbook generation from incident text.
+    ollama_coder_model: "qwen2.5-coder:7b"
+    # Embedding model via Ollama — faster at runtime than sentence-transformers on CPU.
+    # The Python code currently uses sentence-transformers; this is pre-pulled for future migration.
+    ollama_embed_model: "nomic-embed-text"
+    ollama_host: "0.0.0.0"
+    ollama_port: 11434
+
+    # ----- Elasticsearch -----
+    # Used by: product-search reindex job, future repository-aware context indexing,
+    # future Confluence/JIRA ingestion (living organisational memory).
+    elasticsearch_version: "8.14.3"
+    elasticsearch_heap_size: "4g"   # half available RAM on g2-standard-8 (32 GB total)
+    elasticsearch_data_dir: "{{ data_mount }}/elasticsearch"
+    elasticsearch_port: 9200
+
+    # ----- Redis -----
+    # Used by: product-search autocomplete cache (Q10 incident), notification-svc dedup,
+    # future: Celery task queue if pipeline moves to async workers.
+    redis_version: "7.2"
+    redis_port: 6379
+    redis_data_dir: "{{ data_mount }}/redis"
+    redis_max_memory: "2gb"
+
+    # ----- Docker -----
+    docker_compose_version: "2.27.0"
+
+    # ----- OPA -----
+    # Enforces pr_rules.rego policy. Binary installed for both local CLI use and
+    # future GitHub Actions self-hosted runner integration.
+    opa_version: "0.67.0"
+
+    # ----- Rundeck -----
+    # Mocked in the current codebase; Docker image pre-deployed so MOCK_MODE=false
+    # can be switched on without further provisioning.
+    rundeck_version: "5.4.0"
+    rundeck_port: 4440
+    rundeck_data_dir: "{{ data_mount }}/rundeck"
+
+    # ----- Prometheus / Grafana -----
+    # Observability stack from slides_content.md SLIDE OBS: log RAG queries,
+    # LLM call latency, gate decisions, Rundeck execution outcomes.
+    prometheus_version: "2.53.0"
+    prometheus_port: 9090
+    prometheus_data_dir: "{{ data_mount }}/prometheus"
+    grafana_version: "11.1.0"
+    grafana_port: 3000
+    grafana_data_dir: "{{ data_mount }}/grafana"
+
+    # ----- Flask dashboard -----
+    # Slides reference Flask on port 5000. Currently static HTML but the
+    # systemd service is pre-wired for a live Flask app.
+    flask_port: 5000
+
+    # ----- ChromaDB -----
+    chroma_db_dir: "{{ data_mount }}/chroma_db"
+
+    # ----- Git -----
+    git_repo_url: "https://github.com/ember-grid/ops-knowledge-loop.git"
+    git_branch: "main"
+
+  handlers:
+    - name: restart ollama
+      systemd:
+        name: ollama
+        state: restarted
+        daemon_reload: true
+
+    - name: restart nginx
+      systemd:
+        name: nginx
+        state: restarted
+
+    - name: restart redis
+      systemd:
+        name: redis-server
+        state: restarted
+
+    - name: restart elasticsearch
+      systemd:
+        name: elasticsearch
+        state: restarted
+
+    - name: reload systemd
+      systemd:
+        daemon_reload: true
+
+  # ===========================================================================
+  # SECTION 1 — Base system
+  # ===========================================================================
+  tasks:
+    - name: "[base] Set hostname"
+      hostname:
+        name: ember-grid-vm
+      tags: base
+
+    - name: "[base] Set timezone to Europe/London (UK retail ops)"
+      community.general.timezone:
+        name: Europe/London
+      tags: base
+
+    - name: "[base] Update apt cache"
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+      tags: base
+
+    - name: "[base] Upgrade all packages"
+      apt:
+        upgrade: dist
+        autoremove: true
+      tags: base
+
+    - name: "[base] Install essential packages"
+      apt:
+        name:
+          # Build toolchain
+          - build-essential
+          - cmake
+          - git
+          - curl
+          - wget
+          - unzip
+          - jq
+          # Python 3.11 prerequisites
+          - software-properties-common
+          - libssl-dev
+          - libffi-dev
+          - libbz2-dev
+          - libreadline-dev
+          - libsqlite3-dev
+          - liblzma-dev
+          - zlib1g-dev
+          # System monitoring
+          - htop
+          - iotop
+          - nvtop          # GPU process monitor (crucial for debugging Ollama VRAM usage)
+          - nethogs
+          - sysstat
+          # Networking
+          - net-tools
+          - dnsutils
+          - iputils-ping
+          - telnet
+          - nmap
+          # Text / log handling
+          - vim
+          - tmux
+          - jq
+          - ripgrep
+          - tree
+          # Container prerequisites
+          - ca-certificates
+          - gnupg
+          - lsb-release
+          - apt-transport-https
+          # Disk
+          - gdisk
+          - parted
+          - lvm2
+          # Python runtime support
+          - python3-pip
+          - python3-venv
+          - python3-dev
+        state: present
+      tags: base
+
+    - name: "[base] Add deadsnakes PPA for Python 3.11"
+      apt_repository:
+        repo: ppa:deadsnakes/ppa
+        state: present
+      tags: base
+
+    - name: "[base] Install Python 3.11 and dev headers"
+      apt:
+        name:
+          - python3.11
+          - python3.11-venv
+          - python3.11-dev
+          - python3.11-distutils
+        state: present
+        update_cache: true
+      tags: base
+
+    - name: "[base] Create ember user"
+      user:
+        name: "{{ ember_user }}"
+        shell: /bin/bash
+        home: "{{ ember_home }}"
+        create_home: true
+        groups:
+          - sudo
+          - docker
+        append: true
+      tags: base
+
+    - name: "[base] Allow ember user to run sudo without password (convenience for provisioning)"
+      lineinfile:
+        path: /etc/sudoers.d/ember
+        line: "{{ ember_user }} ALL=(ALL) NOPASSWD:ALL"
+        create: true
+        mode: "0440"
+        validate: "visudo -cf %s"
+      tags: base
+
+    # ---------------------------------------------------------------------------
+    # Data disk
+    # ---------------------------------------------------------------------------
+    - name: "[base] Create {{ data_mount }} mount point"
+      file:
+        path: "{{ data_mount }}"
+        state: directory
+        mode: "0755"
+      tags: base
+
+    - name: "[base] Check if data disk is already formatted"
+      command: blkid {{ data_device }}
+      register: blkid_result
+      failed_when: false
+      changed_when: false
+      tags: base
+
+    - name: "[base] Format data disk as ext4 (first run only)"
+      filesystem:
+        fstype: ext4
+        dev: "{{ data_device }}"
+      when: blkid_result.rc != 0
+      tags: base
+
+    - name: "[base] Mount data disk persistently via /etc/fstab"
+      mount:
+        path: "{{ data_mount }}"
+        src: "{{ data_device }}"
+        fstype: ext4
+        opts: defaults,noatime
+        state: mounted
+      tags: base
+
+    - name: "[base] Create data subdirectories"
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ ember_user }}"
+        group: "{{ ember_user }}"
+        mode: "0755"
+      loop:
+        - "{{ data_mount }}/ollama_models"
+        - "{{ chroma_db_dir }}"
+        - "{{ elasticsearch_data_dir }}"
+        - "{{ redis_data_dir }}"
+        - "{{ prometheus_data_dir }}"
+        - "{{ grafana_data_dir }}"
+        - "{{ rundeck_data_dir }}"
+        - "{{ data_mount }}/nginx_certs"
+        - "{{ data_mount }}/logs"
+      tags: base
+
+  # ===========================================================================
+  # SECTION 2 — NVIDIA drivers + CUDA
+  # ===========================================================================
+    - name: "[gpu] Add NVIDIA CUDA repository key"
+      apt_key:
+        url: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/3bf863cc.pub
+        state: present
+      tags: gpu
+
+    - name: "[gpu] Add NVIDIA CUDA apt repository"
+      apt_repository:
+        repo: "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/ /"
+        state: present
+        filename: cuda
+      tags: gpu
+
+    - name: "[gpu] Install NVIDIA driver 550 and CUDA 12.4 toolkit"
+      apt:
+        name:
+          - nvidia-driver-550
+          - cuda-toolkit-12-4
+          - nvidia-cuda-toolkit
+          - nvidia-container-toolkit  # enables GPU passthrough into Docker containers
+        state: present
+        update_cache: true
+      tags: gpu
+      notify: reload systemd
+
+    - name: "[gpu] Ensure CUDA binaries are in PATH system-wide"
+      copy:
+        dest: /etc/profile.d/cuda.sh
+        content: |
+          export PATH=/usr/local/cuda/bin:$PATH
+          export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+        mode: "0644"
+      tags: gpu
+
+    - name: "[gpu] Configure Docker daemon to use NVIDIA runtime by default"
+      copy:
+        dest: /etc/docker/daemon.json
+        content: |
+          {
+            "default-runtime": "nvidia",
+            "runtimes": {
+              "nvidia": {
+                "path": "nvidia-container-runtime",
+                "runtimeArgs": []
+              }
+            },
+            "log-driver": "json-file",
+            "log-opts": {
+              "max-size": "100m",
+              "max-file": "3"
+            }
+          }
+        mode: "0644"
+      tags: gpu
+
+  # ===========================================================================
+  # SECTION 3 — Docker + Docker Compose
+  # ===========================================================================
+    - name: "[docker] Add Docker GPG key"
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+      tags: docker
+
+    - name: "[docker] Add Docker apt repository"
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+        filename: docker
+      tags: docker
+
+    - name: "[docker] Install Docker engine"
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+      tags: docker
+
+    - name: "[docker] Enable and start Docker"
+      systemd:
+        name: docker
+        enabled: true
+        state: started
+      tags: docker
+
+    - name: "[docker] Add ember user to docker group"
+      user:
+        name: "{{ ember_user }}"
+        groups: docker
+        append: true
+      tags: docker
+
+  # ===========================================================================
+  # SECTION 4 — Python 3.11 virtualenv + project dependencies
+  # ===========================================================================
+    - name: "[python] Create project directory"
+      file:
+        path: "{{ project_dir }}"
+        state: directory
+        owner: "{{ ember_user }}"
+        group: "{{ ember_user }}"
+        mode: "0755"
+      tags: python
+
+    - name: "[python] Clone ops-knowledge-loop repository"
+      git:
+        repo: "{{ git_repo_url }}"
+        dest: "{{ project_dir }}"
+        version: "{{ git_branch }}"
+        force: false
+      become_user: "{{ ember_user }}"
+      tags: python
+
+    - name: "[python] Create Python 3.11 virtualenv"
+      command: python3.11 -m venv {{ venv_dir }}
+      args:
+        creates: "{{ venv_dir }}/bin/activate"
+      become_user: "{{ ember_user }}"
+      tags: python
+
+    - name: "[python] Upgrade pip inside venv"
+      pip:
+        name: pip
+        state: latest
+        virtualenv: "{{ venv_dir }}"
+        virtualenv_python: python3.11
+      become_user: "{{ ember_user }}"
+      tags: python
+
+    - name: "[python] Install project requirements"
+      pip:
+        requirements: "{{ project_dir }}/requirements.txt"
+        virtualenv: "{{ venv_dir }}"
+        virtualenv_python: python3.11
+      become_user: "{{ ember_user }}"
+      tags: python
+
+    - name: "[python] Install additional packages (Flask, gunicorn, prometheus-client)"
+      pip:
+        name:
+          # Flask: the dashboard slides reference it; pre-installed so migration from
+          # static HTML to live Flask app requires zero provisioning work.
+          - flask==3.0.3
+          - gunicorn==22.0.0
+          # Prometheus instrumentation — expose pipeline metrics for Grafana dashboards
+          # described in slides SLIDE OBS (confidence distribution, auto-execute rate, P99).
+          - prometheus-client==0.20.0
+          # Celery + Redis: async task queue for future shadow-deployment pipeline
+          # (incidents processed in background, results streamed to dashboard).
+          - celery==5.4.0
+          - redis==5.0.6
+          # Elasticsearch client: used by product-search reindex and future repo indexing.
+          - elasticsearch==8.14.0
+          # GitHub client: repository-aware context (future) — continuous repo indexing.
+          - PyGithub==2.3.0
+          # Confluence/JIRA clients: living organisational memory (future).
+          - atlassian-python-api==3.41.16
+          # Slack SDK: extension point documented in README.
+          - slack-sdk==3.30.0
+          # Schema validation for incident / runbook JSON payloads.
+          - jsonschema==4.23.0
+          # OpenTelemetry: distributed traces across pipeline stages (future).
+          - opentelemetry-api==1.25.0
+          - opentelemetry-sdk==1.25.0
+          - opentelemetry-exporter-otlp==1.25.0
+        virtualenv: "{{ venv_dir }}"
+        virtualenv_python: python3.11
+      become_user: "{{ ember_user }}"
+      tags: python
+
+    - name: "[python] Write .env from template"
+      copy:
+        dest: "{{ project_dir }}/.env"
+        content: |
+          # Generated by Ansible — do not commit to git
+          MOCK_MODE=true
+
+          # ServiceNow (set MOCK_MODE=false and fill these to enable)
+          SERVICENOW_URL=https://your-instance.service-now.com
+          SERVICENOW_USER=
+          SERVICENOW_PASS=
+
+          # Rundeck
+          RUNDECK_URL=http://localhost:{{ rundeck_port }}
+          RUNDECK_TOKEN=
+
+          # GitHub
+          GITHUB_TOKEN=
+          GITHUB_ORG=ember-grid-devops
+
+          # Ollama — local GPU inference, zero per-request cost
+          OLLAMA_HOST=http://localhost:{{ ollama_port }}
+          OLLAMA_MODEL={{ ollama_primary_model }}
+
+          # RAG
+          CHROMA_DB_PATH={{ chroma_db_dir }}
+          KNOWLEDGE_BASE_PATH={{ project_dir }}/knowledge-base
+
+          # Observability
+          PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus_multiproc
+          LOG_DIR={{ data_mount }}/logs
+
+          # Redis
+          REDIS_URL=redis://localhost:{{ redis_port }}/0
+
+          # Elasticsearch
+          ELASTICSEARCH_URL=http://localhost:{{ elasticsearch_port }}
+
+          # Slack (optional)
+          SLACK_WEBHOOK_URL=
+        owner: "{{ ember_user }}"
+        group: "{{ ember_user }}"
+        mode: "0600"
+      tags: python
+
+    - name: "[python] Create prometheus multiproc directory"
+      file:
+        path: /tmp/prometheus_multiproc
+        state: directory
+        owner: "{{ ember_user }}"
+        mode: "0755"
+      tags: python
+
+  # ===========================================================================
+  # SECTION 5 — Ollama (local LLM inference)
+  # ===========================================================================
+    - name: "[ollama] Download and run Ollama installer"
+      shell: curl -fsSL https://ollama.com/install.sh | sh
+      args:
+        creates: /usr/local/bin/ollama
+      tags: ollama
+
+    - name: "[ollama] Create ollama systemd service (GPU-aware)"
+      copy:
+        dest: /etc/systemd/system/ollama.service
+        content: |
+          [Unit]
+          Description=Ollama Local LLM Service
+          After=network-online.target
+          Wants=network-online.target
+
+          [Service]
+          Type=simple
+          User={{ ember_user }}
+          Group={{ ember_user }}
+          WorkingDirectory={{ ember_home }}
+          Environment=OLLAMA_HOST={{ ollama_host }}:{{ ollama_port }}
+          Environment=OLLAMA_MODELS={{ data_mount }}/ollama_models
+          # Keep models in VRAM between requests — avoids 9-second cold-load per query
+          Environment=OLLAMA_KEEP_ALIVE=24h
+          # Reserve VRAM headroom for sentence-transformers running alongside
+          Environment=OLLAMA_GPU_OVERHEAD=512MiB
+          ExecStart=/usr/local/bin/ollama serve
+          Restart=always
+          RestartSec=5
+          StandardOutput=journal
+          StandardError=journal
+          # Cap GPU memory fraction to avoid OOM when running models back-to-back
+          LimitNOFILE=65536
+
+          [Install]
+          WantedBy=multi-user.target
+        mode: "0644"
+      notify: restart ollama
+      tags: ollama
+
+    - name: "[ollama] Enable and start Ollama"
+      systemd:
+        name: ollama
+        enabled: true
+        state: started
+        daemon_reload: true
+      tags: ollama
+
+    - name: "[ollama] Wait for Ollama API to become healthy"
+      uri:
+        url: "http://localhost:{{ ollama_port }}"
+        status_code: 200
+      register: ollama_health
+      retries: 20
+      delay: 5
+      until: ollama_health.status == 200
+      tags: ollama
+
+    - name: "[ollama] Pull primary reasoning model ({{ ollama_primary_model }})"
+      command: ollama pull {{ ollama_primary_model }}
+      become_user: "{{ ember_user }}"
+      environment:
+        OLLAMA_MODELS: "{{ data_mount }}/ollama_models"
+      register: ollama_pull_primary
+      changed_when: "'already up to date' not in ollama_pull_primary.stdout"
+      tags: ollama
+
+    - name: "[ollama] Pull coder model ({{ ollama_coder_model }})"
+      command: ollama pull {{ ollama_coder_model }}
+      become_user: "{{ ember_user }}"
+      environment:
+        OLLAMA_MODELS: "{{ data_mount }}/ollama_models"
+      register: ollama_pull_coder
+      changed_when: "'already up to date' not in ollama_pull_coder.stdout"
+      tags: ollama
+
+    - name: "[ollama] Pull embedding model ({{ ollama_embed_model }})"
+      # Pre-pulled so a future migration from sentence-transformers to Ollama embeddings
+      # is zero-downtime — just swap EMBEDDING_MODEL env var.
+      command: ollama pull {{ ollama_embed_model }}
+      become_user: "{{ ember_user }}"
+      environment:
+        OLLAMA_MODELS: "{{ data_mount }}/ollama_models"
+      register: ollama_pull_embed
+      changed_when: "'already up to date' not in ollama_pull_embed.stdout"
+      tags: ollama
+
+  # ===========================================================================
+  # SECTION 6 — Elasticsearch 8
+  # ===========================================================================
+    - name: "[elasticsearch] Add Elasticsearch GPG key"
+      apt_key:
+        url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+        state: present
+      tags: elasticsearch
+
+    - name: "[elasticsearch] Add Elasticsearch apt repository"
+      apt_repository:
+        repo: "deb https://artifacts.elastic.co/packages/8.x/apt stable main"
+        state: present
+        filename: elastic-8.x
+      tags: elasticsearch
+
+    - name: "[elasticsearch] Install Elasticsearch {{ elasticsearch_version }}"
+      apt:
+        name: "elasticsearch={{ elasticsearch_version }}"
+        state: present
+        update_cache: true
+      tags: elasticsearch
+
+    - name: "[elasticsearch] Configure Elasticsearch"
+      copy:
+        dest: /etc/elasticsearch/elasticsearch.yml
+        content: |
+          cluster.name: ember-grid
+          node.name: ember-grid-node-1
+          path.data: {{ elasticsearch_data_dir }}
+          path.logs: {{ data_mount }}/logs/elasticsearch
+          network.host: 0.0.0.0
+          http.port: {{ elasticsearch_port }}
+          # Single-node cluster (no discovery needed)
+          discovery.type: single-node
+          # Disable security for local development — enable TLS + auth before internet exposure
+          xpack.security.enabled: false
+          xpack.security.enrollment.enabled: false
+          # Limit field explosion from auto-generated runbook documents
+          index.mapping.total_fields.limit: 2000
+        mode: "0660"
+        owner: root
+        group: elasticsearch
+      notify: restart elasticsearch
+      tags: elasticsearch
+
+    - name: "[elasticsearch] Set JVM heap ({{ elasticsearch_heap_size }})"
+      copy:
+        dest: /etc/elasticsearch/jvm.options.d/heap.options
+        content: |
+          -Xms{{ elasticsearch_heap_size }}
+          -Xmx{{ elasticsearch_heap_size }}
+        mode: "0660"
+        owner: root
+        group: elasticsearch
+      notify: restart elasticsearch
+      tags: elasticsearch
+
+    - name: "[elasticsearch] Set data dir ownership"
+      file:
+        path: "{{ elasticsearch_data_dir }}"
+        owner: elasticsearch
+        group: elasticsearch
+        recurse: true
+      tags: elasticsearch
+
+    - name: "[elasticsearch] Enable and start Elasticsearch"
+      systemd:
+        name: elasticsearch
+        enabled: true
+        state: started
+        daemon_reload: true
+      tags: elasticsearch
+
+    - name: "[elasticsearch] Wait for Elasticsearch to become healthy"
+      uri:
+        url: "http://localhost:{{ elasticsearch_port }}/_cluster/health"
+        status_code: 200
+      register: es_health
+      retries: 30
+      delay: 10
+      until: es_health.status == 200
+      tags: elasticsearch
+
+    - name: "[elasticsearch] Create ops-runbooks index"
+      uri:
+        url: "http://localhost:{{ elasticsearch_port }}/ops-runbooks"
+        method: PUT
+        body_format: json
+        body:
+          settings:
+            number_of_shards: 1
+            number_of_replicas: 0
+          mappings:
+            properties:
+              service:      { type: keyword }
+              incident_id:  { type: keyword }
+              content:      { type: text, analyzer: english }
+              embedding:    { type: dense_vector, dims: 384 }  # all-MiniLM-L6-v2 output size
+              created_at:   { type: date }
+              confidence:   { type: float }
+              auto_executed: { type: boolean }
+        status_code: [200, 400]  # 400 = already exists
+      tags: elasticsearch
+
+  # ===========================================================================
+  # SECTION 7 — Redis
+  # ===========================================================================
+    - name: "[redis] Add Redis apt repository"
+      apt_repository:
+        repo: ppa:redislabs/redis
+        state: present
+      tags: redis
+
+    - name: "[redis] Install Redis {{ redis_version }}"
+      apt:
+        name: redis-server
+        state: present
+        update_cache: true
+      tags: redis
+
+    - name: "[redis] Configure Redis"
+      copy:
+        dest: /etc/redis/redis.conf
+        content: |
+          bind 127.0.0.1 ::1
+          port {{ redis_port }}
+          dir {{ redis_data_dir }}
+          maxmemory {{ redis_max_memory }}
+          # allkeys-lru: evict least-recently-used keys when at maxmemory
+          # Appropriate for product-search cache and notification dedup keys
+          maxmemory-policy allkeys-lru
+          # Append-only file for durability (Celery task queue needs this in future)
+          appendonly yes
+          appendfsync everysec
+          # Log to file
+          logfile {{ data_mount }}/logs/redis.log
+          loglevel notice
+          # Disable protected-mode since we bind explicitly above
+          protected-mode yes
+        mode: "0640"
+        owner: redis
+        group: redis
+      notify: restart redis
+      tags: redis
+
+    - name: "[redis] Set Redis data dir ownership"
+      file:
+        path: "{{ redis_data_dir }}"
+        owner: redis
+        group: redis
+        state: directory
+        mode: "0750"
+      tags: redis
+
+    - name: "[redis] Enable and start Redis"
+      systemd:
+        name: redis-server
+        enabled: true
+        state: started
+      tags: redis
+
+  # ===========================================================================
+  # SECTION 8 — OPA (Open Policy Agent)
+  # ===========================================================================
+    - name: "[opa] Download OPA binary {{ opa_version }}"
+      get_url:
+        url: "https://github.com/open-policy-agent/opa/releases/download/v{{ opa_version }}/opa_linux_amd64_static"
+        dest: /usr/local/bin/opa
+        mode: "0755"
+        checksum: "sha256:https://github.com/open-policy-agent/opa/releases/download/v{{ opa_version }}/opa_linux_amd64_static.sha256"
+      tags: opa
+
+    - name: "[opa] Copy PR rules policy to system path"
+      copy:
+        src: "{{ project_dir }}/policies/pr_rules.rego"
+        dest: /etc/opa/pr_rules.rego
+        remote_src: true
+        mode: "0644"
+      tags: opa
+
+    - name: "[opa] Create OPA systemd service (bundle server for self-hosted GitHub Actions runner)"
+      copy:
+        dest: /etc/systemd/system/opa.service
+        content: |
+          [Unit]
+          Description=Open Policy Agent bundle server
+          After=network-online.target
+
+          [Service]
+          Type=simple
+          User={{ ember_user }}
+          ExecStart=/usr/local/bin/opa run --server \
+            --addr 0.0.0.0:8181 \
+            --log-level info \
+            /etc/opa/pr_rules.rego
+          Restart=on-failure
+          RestartSec=5
+
+          [Install]
+          WantedBy=multi-user.target
+        mode: "0644"
+      tags: opa
+
+    - name: "[opa] Enable OPA service (disabled by default — enable when GitHub Actions runner is connected)"
+      systemd:
+        name: opa
+        enabled: false
+        daemon_reload: true
+      tags: opa
+
+  # ===========================================================================
+  # SECTION 9 — Nginx (reverse proxy + TLS termination)
+  # ===========================================================================
+    - name: "[nginx] Install Nginx"
+      apt:
+        name: nginx
+        state: present
+      tags: nginx
+
+    - name: "[nginx] Write Nginx main config"
+      copy:
+        dest: /etc/nginx/nginx.conf
+        content: |
+          user www-data;
+          worker_processes auto;
+          pid /run/nginx.pid;
+
+          events {
+              worker_connections 1024;
+          }
+
+          http {
+              sendfile on;
+              tcp_nopush on;
+              types_hash_max_size 2048;
+              include /etc/nginx/mime.types;
+              default_type application/octet-stream;
+
+              access_log /var/log/nginx/access.log;
+              error_log  /var/log/nginx/error.log;
+
+              gzip on;
+              gzip_types text/plain application/json application/javascript text/css;
+
+              include /etc/nginx/conf.d/*.conf;
+          }
+        mode: "0644"
+      notify: restart nginx
+      tags: nginx
+
+    - name: "[nginx] Write upstream vhost config"
+      copy:
+        dest: /etc/nginx/conf.d/ember-grid.conf
+        content: |
+          # ops-knowledge-loop reverse proxy
+          # All services accessible through Nginx; direct ports also open for dev use.
+
+          # Flask dashboard
+          server {
+              listen 80;
+              server_name _;
+
+              location /dashboard/ {
+                  proxy_pass         http://127.0.0.1:{{ flask_port }}/;
+                  proxy_set_header   Host $host;
+                  proxy_set_header   X-Real-IP $remote_addr;
+                  proxy_read_timeout 120s;
+              }
+
+              # Serve static HTML dashboard when Flask is not running
+              location /static/ {
+                  alias {{ project_dir }}/dashboard/;
+                  index dashboard.html;
+              }
+
+              # Grafana
+              location /grafana/ {
+                  proxy_pass         http://127.0.0.1:{{ grafana_port }}/;
+                  proxy_set_header   Host $host;
+                  proxy_set_header   X-Real-IP $remote_addr;
+              }
+
+              # Prometheus (restrict in prod — no auth on Prometheus by default)
+              location /prometheus/ {
+                  proxy_pass         http://127.0.0.1:{{ prometheus_port }}/prometheus/;
+                  proxy_set_header   Host $host;
+              }
+
+              # Rundeck
+              location /rundeck/ {
+                  proxy_pass         http://127.0.0.1:{{ rundeck_port }}/;
+                  proxy_set_header   Host $host;
+                  proxy_set_header   X-Real-IP $remote_addr;
+                  proxy_read_timeout 300s;
+              }
+
+              location / {
+                  return 200 '{"service":"ember-grid","status":"ok"}';
+                  add_header Content-Type application/json;
+              }
+          }
+        mode: "0644"
+      notify: restart nginx
+      tags: nginx
+
+    - name: "[nginx] Enable and start Nginx"
+      systemd:
+        name: nginx
+        enabled: true
+        state: started
+      tags: nginx
+
+  # ===========================================================================
+  # SECTION 10 — Prometheus + Grafana (via Docker Compose)
+  # ===========================================================================
+    - name: "[observability] Write Prometheus configuration"
+      copy:
+        dest: "{{ prometheus_data_dir }}/prometheus.yml"
+        content: |
+          global:
+            scrape_interval: 15s
+            evaluation_interval: 15s
+            external_labels:
+              project: ember-grid
+
+          # Alerting rules (empty at first — populate as confidence distribution alerts are added)
+          rule_files: []
+
+          scrape_configs:
+            # Prometheus self-monitoring
+            - job_name: prometheus
+              static_configs:
+                - targets: ["localhost:{{ prometheus_port }}"]
+
+            # ops-knowledge-loop Python pipeline metrics
+            # (exposed via prometheus-client in incident_pipeline/run_pipeline.py)
+            - job_name: ops_knowledge_loop
+              static_configs:
+                - targets: ["localhost:8000"]
+              metrics_path: /metrics
+
+            # Ollama: exposes /metrics on port 11434 if OLLAMA_METRICS=1
+            - job_name: ollama
+              static_configs:
+                - targets: ["localhost:{{ ollama_port }}"]
+              metrics_path: /metrics
+
+            # Node exporter (installed below)
+            - job_name: node
+              static_configs:
+                - targets: ["localhost:9100"]
+
+            # Elasticsearch exporter
+            - job_name: elasticsearch
+              static_configs:
+                - targets: ["localhost:9114"]
+
+            # Redis exporter
+            - job_name: redis
+              static_configs:
+                - targets: ["localhost:9121"]
+        owner: "{{ ember_user }}"
+        mode: "0644"
+      tags: observability
+
+    - name: "[observability] Write Docker Compose file for observability stack"
+      copy:
+        dest: "{{ data_mount }}/docker-compose.observability.yml"
+        content: |
+          version: "3.9"
+
+          services:
+
+            prometheus:
+              image: prom/prometheus:v{{ prometheus_version }}
+              container_name: prometheus
+              restart: unless-stopped
+              ports:
+                - "{{ prometheus_port }}:9090"
+              volumes:
+                - {{ prometheus_data_dir }}/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+                - {{ prometheus_data_dir }}/data:/prometheus
+              command:
+                - "--config.file=/etc/prometheus/prometheus.yml"
+                - "--storage.tsdb.path=/prometheus"
+                - "--storage.tsdb.retention.time=90d"
+                - "--web.external-url=/prometheus"
+                - "--web.enable-lifecycle"
+
+            grafana:
+              image: grafana/grafana:{{ grafana_version }}
+              container_name: grafana
+              restart: unless-stopped
+              ports:
+                - "{{ grafana_port }}:3000"
+              environment:
+                GF_SECURITY_ADMIN_PASSWORD: "ember-grid-admin"
+                GF_SERVER_ROOT_URL: "http://%(domain)s/grafana/"
+                GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+                GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: "/etc/grafana/dashboards/ops-knowledge-loop.json"
+              volumes:
+                - {{ grafana_data_dir }}:/var/lib/grafana
+              depends_on:
+                - prometheus
+
+            node-exporter:
+              image: prom/node-exporter:latest
+              container_name: node-exporter
+              restart: unless-stopped
+              ports:
+                - "9100:9100"
+              volumes:
+                - /proc:/host/proc:ro
+                - /sys:/host/sys:ro
+                - /:/rootfs:ro
+              command:
+                - "--path.procfs=/host/proc"
+                - "--path.sysfs=/host/sys"
+                - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+
+            elasticsearch-exporter:
+              image: prometheuscommunity/elasticsearch-exporter:latest
+              container_name: elasticsearch-exporter
+              restart: unless-stopped
+              ports:
+                - "9114:9114"
+              command:
+                - "--es.uri=http://host.docker.internal:{{ elasticsearch_port }}"
+              extra_hosts:
+                - "host.docker.internal:host-gateway"
+
+            redis-exporter:
+              image: oliver006/redis_exporter:latest
+              container_name: redis-exporter
+              restart: unless-stopped
+              ports:
+                - "9121:9121"
+              environment:
+                REDIS_ADDR: "redis://host.docker.internal:{{ redis_port }}"
+              extra_hosts:
+                - "host.docker.internal:host-gateway"
+        owner: "{{ ember_user }}"
+        mode: "0644"
+      tags: observability
+
+    - name: "[observability] Start observability stack with Docker Compose"
+      command: docker compose -f {{ data_mount }}/docker-compose.observability.yml up -d
+      become_user: "{{ ember_user }}"
+      register: compose_obs_result
+      changed_when: "'Started' in compose_obs_result.stdout or 'Created' in compose_obs_result.stdout"
+      tags: observability
+
+  # ===========================================================================
+  # SECTION 11 — Rundeck (Docker)
+  # ===========================================================================
+    - name: "[rundeck] Write Rundeck Docker Compose file"
+      copy:
+        dest: "{{ data_mount }}/docker-compose.rundeck.yml"
+        content: |
+          version: "3.9"
+
+          services:
+            rundeck:
+              image: rundeck/rundeck:{{ rundeck_version }}
+              container_name: rundeck
+              restart: unless-stopped
+              ports:
+                - "{{ rundeck_port }}:4440"
+              environment:
+                RUNDECK_GRAILS_URL: "http://localhost:{{ rundeck_port }}"
+                RUNDECK_SERVER_ADDRESS: "0.0.0.0"
+                # ServiceNow plugin: pre-configured env vars for future MOCK_MODE=false switch
+                RUNDECK_PLUGIN_SERVICENOW_URL: "${SERVICENOW_URL:-}"
+                RUNDECK_PLUGIN_SERVICENOW_USER: "${SERVICENOW_USER:-}"
+                RUNDECK_PLUGIN_SERVICENOW_PASS: "${SERVICENOW_PASS:-}"
+              volumes:
+                - {{ rundeck_data_dir }}/data:/home/rundeck/server/data
+                - {{ rundeck_data_dir }}/logs:/home/rundeck/server/logs
+                - {{ project_dir }}/mock_data/rundeck_jobs.json:/home/rundeck/server/rundeck_jobs.json:ro
+        owner: "{{ ember_user }}"
+        mode: "0644"
+      tags: rundeck
+
+    - name: "[rundeck] Start Rundeck"
+      command: docker compose -f {{ data_mount }}/docker-compose.rundeck.yml up -d
+      become_user: "{{ ember_user }}"
+      register: compose_rundeck_result
+      changed_when: "'Started' in compose_rundeck_result.stdout or 'Created' in compose_rundeck_result.stdout"
+      tags: rundeck
+
+  # ===========================================================================
+  # SECTION 12 — ops-knowledge-loop pipeline setup
+  # ===========================================================================
+    - name: "[project] Populate ChromaDB vector store"
+      command: "{{ venv_dir }}/bin/python rag/populate_database.py"
+      args:
+        chdir: "{{ project_dir }}"
+      become_user: "{{ ember_user }}"
+      environment:
+        CHROMA_DB_PATH: "{{ chroma_db_dir }}"
+        KNOWLEDGE_BASE_PATH: "{{ project_dir }}/knowledge-base"
+        MOCK_MODE: "true"
+      tags: project
+
+    - name: "[project] Run test suite to verify environment"
+      command: "{{ venv_dir }}/bin/python -m pytest tests/ -v --tb=short"
+      args:
+        chdir: "{{ project_dir }}"
+      become_user: "{{ ember_user }}"
+      register: pytest_result
+      changed_when: false
+      failed_when: pytest_result.rc != 0
+      tags: project
+
+    - name: "[project] Create Flask dashboard systemd service"
+      copy:
+        dest: /etc/systemd/system/ember-dashboard.service
+        content: |
+          [Unit]
+          Description=Ember Grid ops dashboard (Flask / gunicorn)
+          After=network-online.target ollama.service
+
+          [Service]
+          Type=simple
+          User={{ ember_user }}
+          Group={{ ember_user }}
+          WorkingDirectory={{ project_dir }}
+          EnvironmentFile={{ project_dir }}/.env
+          ExecStart={{ venv_dir }}/bin/gunicorn \
+            --bind 0.0.0.0:{{ flask_port }} \
+            --workers 2 \
+            --timeout 120 \
+            --access-logfile {{ data_mount }}/logs/dashboard-access.log \
+            --error-logfile {{ data_mount }}/logs/dashboard-error.log \
+            "dashboard.app:app"
+          Restart=on-failure
+          RestartSec=10
+
+          [Install]
+          WantedBy=multi-user.target
+        mode: "0644"
+      notify: reload systemd
+      tags: project, services
+
+    - name: "[project] Create incident pipeline scheduler systemd service"
+      copy:
+        dest: /etc/systemd/system/ember-pipeline.service
+        content: |
+          [Unit]
+          Description=Ember Grid incident pipeline (single run — triggered by timer)
+          After=network-online.target ollama.service elasticsearch.service
+
+          [Service]
+          Type=oneshot
+          User={{ ember_user }}
+          Group={{ ember_user }}
+          WorkingDirectory={{ project_dir }}
+          EnvironmentFile={{ project_dir }}/.env
+          ExecStart={{ venv_dir }}/bin/python incident_pipeline/run_pipeline.py
+          StandardOutput=append:{{ data_mount }}/logs/pipeline.log
+          StandardError=append:{{ data_mount }}/logs/pipeline-error.log
+        mode: "0644"
+      notify: reload systemd
+      tags: project, services
+
+    - name: "[project] Create incident pipeline systemd timer (runs every 5 minutes)"
+      copy:
+        dest: /etc/systemd/system/ember-pipeline.timer
+        content: |
+          [Unit]
+          Description=Ember Grid incident pipeline — run every 5 minutes
+
+          [Timer]
+          OnBootSec=2min
+          OnUnitActiveSec=5min
+          Persistent=true
+
+          [Install]
+          WantedBy=timers.target
+        mode: "0644"
+      notify: reload systemd
+      tags: project, services
+
+    - name: "[project] Create RAG rebuild service (runs nightly after new incidents are committed)"
+      copy:
+        dest: /etc/systemd/system/ember-rag-rebuild.service
+        content: |
+          [Unit]
+          Description=Ember Grid RAG ChromaDB rebuild
+          After=network-online.target
+
+          [Service]
+          Type=oneshot
+          User={{ ember_user }}
+          Group={{ ember_user }}
+          WorkingDirectory={{ project_dir }}
+          EnvironmentFile={{ project_dir }}/.env
+          ExecStart={{ venv_dir }}/bin/python rag/populate_database.py
+          StandardOutput=append:{{ data_mount }}/logs/rag-rebuild.log
+          StandardError=append:{{ data_mount }}/logs/rag-rebuild-error.log
+        mode: "0644"
+      notify: reload systemd
+      tags: project, services
+
+    - name: "[project] Create RAG rebuild timer (2 AM daily)"
+      copy:
+        dest: /etc/systemd/system/ember-rag-rebuild.timer
+        content: |
+          [Unit]
+          Description=Ember Grid nightly RAG rebuild
+
+          [Timer]
+          OnCalendar=*-*-* 02:00:00
+          Persistent=true
+
+          [Install]
+          WantedBy=timers.target
+        mode: "0644"
+      notify: reload systemd
+      tags: project, services
+
+    - name: "[project] Enable timers and pipeline service"
+      systemd:
+        name: "{{ item }}"
+        enabled: true
+        state: started
+        daemon_reload: true
+      loop:
+        - ember-pipeline.timer
+        - ember-rag-rebuild.timer
+      tags: project, services
+
+    - name: "[project] Enable dashboard service (disabled until Flask app is migrated from static HTML)"
+      systemd:
+        name: ember-dashboard.service
+        enabled: false
+        daemon_reload: true
+      tags: project, services
+
+  # ===========================================================================
+  # SECTION 13 — Final hardening + housekeeping
+  # ===========================================================================
+    - name: "[base] Set log rotation for Ember Grid logs"
+      copy:
+        dest: /etc/logrotate.d/ember-grid
+        content: |
+          {{ data_mount }}/logs/*.log {
+              daily
+              rotate 30
+              compress
+              missingok
+              notifempty
+              copytruncate
+          }
+        mode: "0644"
+      tags: base
+
+    - name: "[base] Install fail2ban (SSH brute-force protection)"
+      apt:
+        name: fail2ban
+        state: present
+      tags: base
+
+    - name: "[base] Enable and start fail2ban"
+      systemd:
+        name: fail2ban
+        enabled: true
+        state: started
+      tags: base
+
+    - name: "[base] Disable root SSH login"
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^PermitRootLogin"
+        line: "PermitRootLogin no"
+      tags: base
+
+    - name: "[base] Disable password SSH authentication"
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^PasswordAuthentication"
+        line: "PasswordAuthentication no"
+      tags: base
+
+    - name: "[base] Print provisioning summary"
+      debug:
+        msg:
+          - "=== Ember Grid provisioning complete ==="
+          - "Ollama:         http://{{ ansible_host }}:{{ ollama_port }}"
+          - "Pipeline logs:  {{ data_mount }}/logs/pipeline.log"
+          - "ChromaDB:       {{ chroma_db_dir }}"
+          - "Elasticsearch:  http://{{ ansible_host }}:{{ elasticsearch_port }}"
+          - "Redis:          localhost:{{ redis_port }}"
+          - "Prometheus:     http://{{ ansible_host }}:{{ prometheus_port }}"
+          - "Grafana:        http://{{ ansible_host }}:{{ grafana_port }}  (admin / ember-grid-admin)"
+          - "Rundeck:        http://{{ ansible_host }}:{{ rundeck_port }}"
+          - "Nginx:          http://{{ ansible_host }}"
+          - "Run demo:       cd {{ project_dir }} && {{ venv_dir }}/bin/python demo.py"
+      tags: always

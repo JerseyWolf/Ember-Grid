@@ -74,6 +74,8 @@ def search_knowledge_base(query: str, n_results: int = 3) -> list[dict]:
 
     results: list[dict] = []
     for text, meta, distance in zip(documents, metadatas, distances):
+        # ChromaDB returns cosine *distance* (0 = identical, 2 = opposite).
+        # Convert to similarity score in [0, 1] so callers can use intuitive thresholds.
         score = max(0.0, 1.0 - float(distance))
         results.append(
             {
