@@ -52,6 +52,16 @@ def _enrich_with_ollama(incident: dict, resolution_notes: str) -> str | None:
     """Ask the local LLM for diagnostic steps and prevention notes. None on failure."""
     # The ---SPLIT--- separator is a reliable parse boundary — less fragile than asking
     # the model to use JSON or numbered headings, both of which it tends to ignore.
+    #
+    # NOTE (forward-looking): this is the second of two Ollama call sites
+    # (the first is _call_ollama in ai_remediation.py). A future variant —
+    # see "Living Organisational Memory" in the SLIDE FUTURE section of
+    # presentation/slides_content.md — would source the diagnostic/prevention
+    # text not just from the LLM but also from auto-ingested JIRA tickets
+    # and Confluence post-mortems, then have a Copilot Workspace agent
+    # propose the runbook edit as a PR for human review. The split-section
+    # contract (---SPLIT--- delimiter, Diagnostic / Prevention sections)
+    # stays exactly the same; only the source of the text changes.
     prompt = f"""You are documenting a Ember Grid incident for the on-call
 knowledge base. Produce TWO short markdown sections, no headings, no extra
 commentary:

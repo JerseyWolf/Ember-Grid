@@ -186,6 +186,13 @@ def select_strategy(path: Path) -> str:
     Incident write-ups are kept whole because splitting destroys the resolution context
     that the LLM needs to reason about the correct Rundeck job.
     """
+    # NOTE (forward-looking): a future "Repository-Aware Context" extension
+    # (see SLIDE FUTURE in presentation/slides_content.md) would add a fourth
+    # branch here for indexing service repos: code-aware chunking that
+    # respects function/class boundaries for .py / .go / .ts, plus a
+    # commit-windowed strategy for recent changes. The dispatch table in
+    # apply_strategy() is the only other place to update; everything
+    # downstream consumes the resulting strings unchanged.
     try:
         rel = path.relative_to(KNOWLEDGE_BASE_PATH)
     except ValueError:

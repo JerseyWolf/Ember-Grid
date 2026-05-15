@@ -2,6 +2,10 @@
 
 **Ember Grid** · portfolio codebase and presentation package.
 
+> New to the project? Start with [`INDEX.md`](INDEX.md) — it maps every
+> directory, script, and document so you can find what you need in under
+> two minutes.
+
 A self-improving RAG-powered incident remediation loop for Ember Grid's
 DevOps platform. The canonical walkthrough evidence is
 `presentation/slides_content.md` (10 live queries with captured results).

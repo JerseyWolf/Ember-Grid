@@ -165,6 +165,14 @@ def _rule_based_match(incident: dict, jobs: list[dict]) -> dict:
 
 def _call_ollama(prompt: str) -> str:
     """Send the prompt to the local Ollama server and return raw text."""
+    # NOTE (forward-looking): the local Ollama path keeps incident data on-prem
+    # at zero per-request cost — the deliberate choice for the demo. A future
+    # variant (see "Where This Goes Next" in presentation/slides_content.md)
+    # could swap this function for a thin GitHub Copilot agents / Copilot
+    # Workspace API call without changing the surrounding RAG context build or
+    # the JSON contract enforced by _parse_llm_json / _job_by_name. The model
+    # stays interchangeable; only this client function and OLLAMA_MODEL/host
+    # env vars would need to move.
     client = ollama.Client(host=OLLAMA_HOST)
     response = client.generate(
         model=OLLAMA_MODEL,
