@@ -1,0 +1,154 @@
+\begin{frame}{Q2 — payment-processor 500 errors}
+  \slidecat{Live Output — Query 2 / 10}
+  {\color{cteal}\ttfamily\small\bfseries confidence 0.95 -> AUTO-EXECUTE}
+  \vspace{0.15cm}
+  \begin{terminal}
+    \$ python query\_live.py ``payment processor returning 500 errors...''\\
+
+    RAG Top 3: {\color{camber}0.495 / 0.492 / 0.488 ✗ weak match}  incidents.json\\
+    \hspace*{0.4cm}[INC0043135/231/183] payment-processor 5xx error spike (70--72\%)\\
+
+    ⚠ No close precedent — best match 0.495. AI will deduce a remediation.\\
+    \hspace*{0.4cm}[weak RAG, but model returns 0.95 via pattern recognition]\\
+
+    Recommended Job : {\color{cauto}rollback-to-previous-version}\\
+    Confidence      : {\color{cauto}0.95}  |  Gate: {\color{cauto}AUTO-EXECUTE}\\
+    Reasoning       : Three prior 5xx spikes resolved by rollback; standard mitigation confirmed.\\
+
+    {\color{cauto}✓ WOULD AUTO-EXECUTE  —  rollback-to-previous-version  (0.95 ≥ 0.70)}\\
+    Total runtime: 8.2s
+  \end{terminal}
+\end{frame}
+
+\begin{frame}{Q4 — inventory sync stalled}
+  \slidecat{Live Output — Query 4 / 10}
+  {\color{camber}\ttfamily\small\bfseries confidence 0.66 -> PENDING REVIEW}
+  \vspace{0.15cm}
+  \begin{terminal}
+    \$ python query\_live.py ``inventory sync stalled, stock levels not updating...''\\
+
+    RAG Top 3: {\color{cauto}0.675 / 0.656 / 0.639 \textasciitilde{} partial match}  incidents.json\\
+    \hspace*{0.4cm}[INC0041047/43477/42043] inventory-sync pipeline stalls\\
+
+    ✓ Strong precedent found — incidents.json (similarity 0.675)\\
+
+    Recommended Job : {\color{camber}force-inventory-sync}\\
+    Confidence      : {\color{camber}0.66}  [0.04 below gate]  |  Gate: {\color{camber}PENDING REVIEW}\\
+    Reasoning       : Stalled sync mirrors INC0043477 pipeline-stall exactly.\\
+
+    {\color{camber}⏸  PENDING HUMAN REVIEW  —  force-inventory-sync  (0.66 < 0.70)}\\
+    Total runtime: 15.4s
+  \end{terminal}
+\end{frame}
+
+\begin{frame}{Q5 — store POS tills unresponsive}
+  \slidecat{Live Output — Query 5 / 10}
+  {\color{cteal}\ttfamily\small\bfseries confidence 0.75 -> AUTO-EXECUTE}
+  \vspace{0.15cm}
+  \begin{terminal}
+    \$ python query\_live.py ``store POS system tills unresponsive, cashiers cannot process...''\\
+
+    RAG Top 3: {\color{cauto}0.573 / 0.569 \textasciitilde{} partial}  {\color{camber}0.547 ✗ weak}  incidents.json\\
+    \hspace*{0.4cm}store-pos-system pipeline stalls + Consul mesh API latency\\
+
+    ⚠ No close precedent — best match 0.573. AI will deduce a remediation.\\
+    \hspace*{0.4cm}[model correctly extrapolated from P1 Consul mesh outage]\\
+
+    Recommended Job : {\color{cauto}rollback-to-previous-version}\\
+    Confidence      : {\color{cauto}0.75}  |  Gate: {\color{cauto}ABOVE GATE -> AUTO-EXECUTE}\\
+
+    {\color{cauto}✓ WOULD AUTO-EXECUTE  —  rollback-to-previous-version  (0.75 ≥ 0.70)}\\
+    Total runtime: 9.9s
+  \end{terminal}
+\end{frame}
+
+\begin{frame}{Q7 — order fulfilment latency spike}
+  \slidecat{Live Output — Query 7 / 10}
+  {\color{cteal}\ttfamily\small\bfseries confidence 0.75 -> AUTO-EXECUTE}
+  \vspace{0.15cm}
+  \begin{terminal}
+    \$ python query\_live.py ``order fulfilment delays, upstream pricing engine latency spike...''\\
+
+    RAG Top 3: {\color{cauto}0.571 / 0.565 / 0.558 \textasciitilde{} partial match}  incidents.json\\
+    \hspace*{0.4cm}[INC0043496/448/304] order-fulfilment P99 latency breaches (1102ms--4926ms)\\
+
+    ⚠ No close precedent — best match 0.571. AI will deduce a remediation.\\
+
+    Recommended Job : {\color{cauto}scale-up-replicas}\\
+    Confidence      : {\color{cauto}0.75}  |  Gate: {\color{cauto}ABOVE GATE -> AUTO-EXECUTE}\\
+    Reasoning       : Upstream latency -> downstream pressure; scaling reduces per-instance load.\\
+
+    {\color{cauto}✓ WOULD AUTO-EXECUTE  —  scale-up-replicas  (0.75 ≥ 0.70)}\\
+    Total runtime: 12.2s
+  \end{terminal}
+\end{frame}
+
+\begin{frame}{Q8 — notification service duplicate emails}
+  \slidecat{Live Output — Query 8 / 10}
+  {\color{camber}\ttfamily\small\bfseries confidence 0.35 -> PENDING REVIEW}
+  \vspace{0.15cm}
+  \begin{terminal}
+    \$ python query\_live.py ``notification service sending duplicate confirmation emails...''\\
+
+    RAG Top 3: {\color{cauto}0.687 \textasciitilde{} partial}  incidents.json  (duplicate PUSH notifications)\\
+    \hspace*{0.4cm}{\color{camber}0.520 / 0.467 ✗ weak}  incidents.json + INC0042468-notif-svc.md\\
+
+    ✓ Strong precedent found — incidents.json (0.687)\\
+    \hspace*{0.4cm}[but matched PUSH notifications, not email — semantic mismatch]\\
+
+    Recommended Job : {\color{camber}restart-service-with-memory-bump}\\
+    Confidence      : {\color{camber}0.35  <-- MODEL SELF-DOWNGRADED}  |  Gate: {\color{camber}RULE-BASED FALLBACK}\\
+    Reasoning       : Runbook context (INC0042468) used restart-with-memory-bump for config issue.\\
+    \hspace*{0.4cm}Current incident involves email duplicates, not push notifications.\\
+    \hspace*{0.4cm}Semantic mismatch between incident type and available context.\\
+
+    {\color{camber}⏸  PENDING HUMAN REVIEW  —  restart-service-with-memory-bump  (0.35 < 0.70)}\\
+    Total runtime: 22.5s
+  \end{terminal}
+\end{frame}
+
+\begin{frame}{Q9 — supplier EDI orders dropped}
+  \slidecat{Live Output — Query 9 / 10}
+  {\color{camber}\ttfamily\small\bfseries confidence 0.65 -> PENDING REVIEW}
+  \vspace{0.15cm}
+  \begin{terminal}
+    \$ python query\_live.py ``supplier integration dropping EDI orders during XML schema validation''\\
+
+    RAG Top 3: {\color{cauto}0.705 / 0.561 \textasciitilde{} partial}  {\color{camber}0.542 ✗ weak}  incidents.json\\
+    \hspace*{0.4cm}[INC0041737] EDI batch failure (Supplier-31 schema version mismatch)\\
+
+    ✓ Strong precedent found — incidents.json (0.705)\\
+
+    Recommended Job : {\color{camber}force-inventory-sync}\\
+    Confidence      : {\color{camber}0.65}  |  Gate: {\color{camber}PENDING REVIEW}\\
+    Reasoning       : EDI orders dropped during XML schema validation matches INC0041737 closely.\\
+    \hspace*{0.4cm}force-inventory-sync addresses data pipeline stalls, not schema mismatches.\\
+    \hspace*{0.4cm}Plausible mitigation, but not the correct root-cause fix. Correctly held.\\
+
+    {\color{camber}⏸  PENDING HUMAN REVIEW  —  force-inventory-sync  (0.65 < 0.70)}\\
+    Total runtime: 25.7s
+  \end{terminal}
+\end{frame}
+
+\begin{frame}{Q10 — recommendation engine degraded}
+  \slidecat{Live Output — Query 10 / 10}
+  {\color{camber}\ttfamily\small\bfseries confidence 0.45 -> PENDING REVIEW}
+  \vspace{0.15cm}
+  \begin{terminal}
+    \$ python query\_live.py ``recommendation engine returning identical suggestions after model retraining''\\
+
+    RAG Top 3: {\color{camber}0.393 / 0.356 / 0.315 ✗ weak match}  incidents.json\\
+    \hspace*{0.4cm}All matches from product-search (different service). Zero KB entries for rec-engine.\\
+
+    ⚠ No close precedent — best match 0.393. AI will deduce a remediation.\\
+
+    Recommended Job : {\color{camber}reindex-elasticsearch}\\
+    Confidence      : {\color{camber}0.45  <-- ACKNOWLEDGING LIMITS}  |  Gate: {\color{camber}RULE-BASED FALLBACK}\\
+    Reasoning       : Identical suggestions indicate stale/improperly updated index data.\\
+    \hspace*{0.4cm}No recommendation-engine incidents in knowledge base. Cross-service inference only.\\
+    \hspace*{0.4cm}Model self-downgraded --- this is the system acknowledging its limits.\\
+
+    {\color{camber}⏸  PENDING HUMAN REVIEW  —  reindex-elasticsearch  (0.45 < 0.70)}\\
+    Total runtime: 13.8s
+  \end{terminal}
+\end{frame}

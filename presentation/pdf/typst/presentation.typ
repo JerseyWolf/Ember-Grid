@@ -108,7 +108,7 @@
   #text(fill: c-teal, size: 12pt)[AI-Powered Incident Triage · Ember Grid]
   #v(0.2cm)
   #text(fill: rgb("#6B8F6B"), size: 9pt, font: mono-font
-  )[#sym.triangle.r From alert to remediation in under 10 seconds]
+  )[#sym.triangle.r From alert to remediation in under 2 minutes]
   #v(0.6cm)
   #block(
     fill: bg-dark2,
@@ -119,13 +119,115 @@
     )[INCIDENT #sym.arrow.r RAG #sym.arrow.r LLM #sym.arrow.r GATE #sym.arrow.r RUNDECK #sym.arrow.r TICKET CLOSED]
   )
   #place(bottom + right, dx: -1cm, dy: -0.6cm,
-    text(fill: rgb("#1E3A1E"), size: 7pt, font: mono-font)[ember\@ops:~\$ 1/9]
+    text(fill: rgb("#1E3A1E"), size: 7pt, font: mono-font)[ember\@ops:~\$ #context counter(page).display("1") / #context counter(page).final().first()]
   )
 ]
 #pagebreak()
 
 // ══════════════════════════════════════════════════════════════════
-// SLIDE 2 — THE PROBLEM (light)
+// SLIDE 2 — PRIOR ART (light)
+// ══════════════════════════════════════════════════════════════════
+#let prior-col(frame-label, accent, chip, chip2, title, meta, items, tagline) = block(
+  fill: bg-light,
+  stroke: 1pt + accent,
+  radius: 2pt,
+  inset: 0pt,
+  width: 100%,
+  [
+    #block(
+      fill: bg-light2,
+      stroke: (bottom: 0.4pt + c-border),
+      inset: (x: 6pt, y: 4pt),
+      width: 100%,
+      text(fill: accent, size: 6pt, font: mono-font, weight: "bold")[#frame-label]
+    )
+    #block(inset: (x: 6pt, y: 5pt))[
+      #text(fill: accent, weight: "bold", size: 6pt, font: mono-font)[#chip]
+      #if chip2 != none [
+        #v(0.05cm)
+        #text(fill: accent, weight: "bold", size: 6pt, font: mono-font)[#chip2]
+      ]
+      #v(0.1cm)
+      #text(fill: c-text, weight: "bold", size: 7pt, font: mono-font)[#title]
+      #v(0.04cm)
+      #text(fill: c-dim, size: 6pt)[#meta]
+      #v(0.1cm)
+      #for item in items [
+        #text(fill: c-text, size: 6pt)[#sym.triangle.r #item]
+        #v(0.05cm)
+      ]
+      #line(length: 100%, stroke: 0.3pt + c-border)
+      #v(0.04cm)
+      #block[
+        #set par(leading: 0.35em, spacing: 0.35em)
+        #text(fill: c-dim, size: 5.6pt, style: "italic")[#tagline]
+      ]
+    ]
+  ]
+)
+
+#light-slide[
+  #slide-label[Background]
+  #v(0.15cm)
+  #sh[Prior Art]
+  #text(fill: c-dim, size: 8.5pt)[Three projects that map directly onto this one.]
+  #v(0.2cm)
+  #grid(
+    columns: (1fr, 1fr, 1fr),
+    gutter: 12pt,
+    prior-col(
+      [┌─ WOLF FRAMEWORK ─────────────────┐],
+      c-green,
+      [LangChain · ChromaDB · MCP · local LLM],
+      none,
+      [WOLF Framework],
+      [Open-source AI-assisted game dev environment · 2025–present],
+      (
+        [LangChain + ChromaDB + LiteLLM RAG via MCP server],
+        [Headless SimBot: evidence-gate-action loop],
+        [Local (Ollama) and cloud/paid variants],
+      ),
+      [Same RAG stack and architectural pattern as this project.],
+    ),
+    prior-col(
+      [┌─ QVC / QURATE RETAIL ────────────┐],
+      c-teal,
+      [~850 services · 5y zero audit breach],
+      none,
+      [Cloud Migration],
+      [~850 Kubernetes microservices · 2020–2024],
+      (
+        [Migrated off Jenkins, Spinnaker, Rancher, Bitbucket, Ansible fully to Azure DevOps],
+        [Live multi-DC AEM deployments; up to 40 stakeholders],
+        [Zero audit breach over 5 years; ServiceNow tracked],
+      ),
+      [Same retail-scale infrastructure, ServiceNow, and gating discipline.],
+    ),
+    prior-col(
+      [┌─ MULTI-GEO MOBILE PIPELINE ──────┐],
+      c-amber,
+      [Release: 3h → 30min],
+      [PR acceptance: 2h → 20min],
+      [Build-Test-Deploy],
+      [Bitbucket · Jenkins · Artifactory · Jira · Consul],
+      (
+        [Multi-geo mobile build-test-deploy pipeline],
+        [Release effort: 3 hours → 30 minutes],
+        [Automated PR acceptance: 2 hours → 20 minutes],
+        [Stage tracking, drift detection, rollback paths],
+      ),
+      [Same compression pattern applied to incident response.],
+    ),
+  )
+  #v(0.15cm)
+  #text(fill: c-dim, size: 7pt, font: mono-font)[
+    #sym.triangle.r 8+ years automotive & UK retail · Ansible · ServiceNow · multi-geo release engineering · RAG / MCP / local-LLM
+  ]
+]
+#pagebreak()
+
+// ══════════════════════════════════════════════════════════════════
+// SLIDE 3 — THE PROBLEM (light)
 // ══════════════════════════════════════════════════════════════════
 #light-slide[
   #slide-label[Context]
@@ -196,7 +298,7 @@
   )
 
   #v(0.3cm)
-  #callout[#sym.triangle.r Fully local · No data leaves the machine · No API costs · ~10s end-to-end]
+  #callout[#sym.triangle.r Fully local · No data leaves the machine · No API costs · ~30s end-to-end]
 ]
 #pagebreak()
 
@@ -215,7 +317,7 @@
     #lcard(c-green)[#text(fill: c-text, size: 8.5pt)[Each indexed as a vector embedding in ChromaDB]]
     #lcard(c-green)[
       #text(fill: c-dim, size: 7.5pt, font: mono-font
-      )[OOM kills · latency spikes · ETL failures\nEDI mismatches · POS outages\nloyalty bugs · notification duplicates]
+      )[OOM kills · latency spikes · ETL failures · EDI mismatches · POS outages · loyalty bugs · notification duplicates]
     ]
   ], [
     #text(fill: c-teal, weight: "bold", size: 8pt, font: mono-font)[#sym.triangle.r RUNBOOKS]
@@ -383,8 +485,8 @@
   )
 ]
 
-#q-slide("1", "checkout-service OOM kill", "0.95 → AUTO-EXECUTE", c-teal)[
-\$ python query_live.py "checkout service OOM kill, container hitting memory limit..."
+#q-slide("1", "checkout-service OOM kill", "0.95 -> AUTO-EXECUTE", c-teal)[
+\$ python query_live.py "checkout service OOM kill, container hitting memory limit and restarting repeatedly under load"
 
   RAG Top 3:
   1  incidents.json   0.797 ✓ strong match   [INC0043096] checkout-service OOM kill
@@ -395,93 +497,35 @@
 
   Recommended Job  : restart-service-with-memory-bump   |  Confidence : 0.95
   Decision Gate    : AUTO-EXECUTE
-  Reasoning        : OOM kills directly align with job purpose; runbook confirms trigger condition.
+  Reasoning        : OOM kills due to memory limits directly align with the job purpose.
+                     Runbook context explicitly confirms memory threshold breach as trigger.
 
-  ✓ WOULD AUTO-EXECUTE — restart-service-with-memory-bump (conf 0.95 ≥ 0.70 gate)
+  ✓ WOULD AUTO-EXECUTE — restart-service-with-memory-bump (confidence 0.95 ≥ 0.70 gate)
   Total runtime: 8.7s
 ]
 #pagebreak()
 
-#q-slide("2", "payment-processor 500 errors", "0.95 → AUTO-EXECUTE", c-teal)[
-\$ python query_live.py "payment processor returning 500 errors, transactions not completing..."
-
-  RAG Top 3:
-  1  incidents.json   0.495 ✗ weak match   [INC0043135] payment-processor 5xx spike (70%)
-  2  incidents.json   0.492 ✗ weak match   [INC0043231] payment-processor 5xx spike (72%)
-  3  incidents.json   0.488 ✗ weak match   [INC0043183] payment-processor 5xx spike (71%)
-
-  ⚠ No close precedent — best match 0.495. AI will deduce a remediation.
-  [weak RAG; model returns 0.95 via pattern recognition across three prior resolved incidents]
-
-  Recommended Job  : rollback-to-previous-version   |  Confidence : 0.95
-  Decision Gate    : AUTO-EXECUTE
-  Reasoning        : Three prior 5xx spikes resolved by rollback; standard mitigation confirmed.
-
-  ✓ WOULD AUTO-EXECUTE — rollback-to-previous-version (conf 0.95 ≥ 0.70 gate)
-  Total runtime: 8.2s
-]
-#pagebreak()
-
-#q-slide("3", "product-search unresponsive after deploy", "0.75 → AUTO-EXECUTE", c-teal)[
+#q-slide("3", "product-search unresponsive after deploy", "0.75 -> AUTO-EXECUTE", c-teal)[
 \$ python query_live.py "product search returning empty results, search index unresponsive after deployment"
 
   RAG Top 3:
-  1  product-search.md   0.575 ~ partial match   Service Overview: Elasticsearch-backed search service
+  1  product-search.md   0.575 ~ partial match   Service Overview: ES-backed search service
   2  incidents.json      0.571 ~ partial match   [INC0043346] product-search slow query (1352ms)
   3  product-search.md   0.570 ~ partial match   Diagnostic Steps: kubectl exec cache hit rate
 
-  ⚠ No close precedent — best match 0.575. AI will deduce a remediation.
-  [mixed sources: runbook + incident; model synthesises both correctly]
+  ⚠ No close precedent — best match 0.575 in product-search.md. AI will deduce a remediation.
 
   Recommended Job  : reindex-elasticsearch   |  Confidence : 0.75
-  Decision Gate    : ABOVE GATE --> AUTO-EXECUTE
-  Reasoning        : Unresponsive ES index after deployment maps to reindexing as direct fix.
+  Decision Gate    : ABOVE GATE -> AUTO-EXECUTE
+  Reasoning        : Unresponsive ES index directly maps to reindexing as remediation step.
+                     Runbook + incident context both confirm the service architecture.
 
-  ✓ WOULD AUTO-EXECUTE — reindex-elasticsearch (conf 0.75 ≥ 0.70 gate)
+  ✓ WOULD AUTO-EXECUTE — reindex-elasticsearch (confidence 0.75 ≥ 0.70 gate)
   Total runtime: 9.9s
 ]
 #pagebreak()
 
-#q-slide("4", "inventory sync stalled", "0.66 → PENDING REVIEW", c-pend)[
-\$ python query_live.py "inventory sync stalled, stock levels on website not updating after warehouse batch job"
-
-  RAG Top 3:
-  1  incidents.json   0.675 ~ partial match   [INC0041047] inventory-sync batch job failed silently
-  2  incidents.json   0.656 ~ partial match   [INC0043477] inventory-sync data pipeline stall (75 min)
-  3  incidents.json   0.639 ~ partial match   [INC0042043] inventory-sync failing for 14 stores
-
-  ✓ Strong precedent found — incidents.json (similarity 0.675)
-
-  Recommended Job  : force-inventory-sync   |  Confidence : #text(fill: c-amber)[0.66  \<-- just below gate]
-  Decision Gate    : PENDING REVIEW
-  Reasoning        : Stalled sync mirrors INC0043477 pipeline-stall exactly; confidence 0.04 below gate.
-
-  ⏸  PENDING HUMAN REVIEW — force-inventory-sync (conf 0.66 \< 0.70 gate)
-  Total runtime: 15.4s
-]
-#pagebreak()
-
-#q-slide("5", "store POS tills unresponsive", "0.75 → AUTO-EXECUTE", c-teal)[
-\$ python query_live.py "store POS system tills unresponsive, cashiers cannot process customer transactions"
-
-  RAG Top 3:
-  1  incidents.json   0.573 ~ partial match   [INC0043165] store-pos-system pipeline stall (75 min)
-  2  incidents.json   0.569 ~ partial match   [INC0043333] store-pos-system pipeline stall (75 min)
-  3  incidents.json   0.547 ✗ weak match      [INC0041062] store-pos-system API latency (Consul mesh)
-
-  ⚠ No close precedent — best match 0.573. AI will deduce a remediation.
-  [model correctly extrapolated from P1 Consul mesh outage (2,300 stores) resolved by config rollback]
-
-  Recommended Job  : rollback-to-previous-version   |  Confidence : 0.75
-  Decision Gate    : ABOVE GATE --> AUTO-EXECUTE
-  Reasoning        : P1 config rollback pattern matches despite low RAG similarity.
-
-  ✓ WOULD AUTO-EXECUTE — rollback-to-previous-version (conf 0.75 ≥ 0.70 gate)
-  Total runtime: 9.9s
-]
-#pagebreak()
-
-#q-slide("6", "loyalty service not awarding points", "0.35 → PENDING REVIEW", c-pend)[
+#q-slide("6", "loyalty service not awarding points", "0.35 -> PENDING REVIEW", c-pend)[
 \$ python query_live.py "loyalty service not awarding points after purchase, customer accounts not updating"
 
   RAG Top 3:
@@ -497,94 +541,8 @@
                      Runbook context references backfill scripts — not a restart path.
                      Semantic mismatch between query and available context. Self-downgraded.
 
-  ⏸  PENDING HUMAN REVIEW — restart-service-rolling (conf 0.35 \< 0.70 gate)
+  ⏸  PENDING HUMAN REVIEW — restart-service-rolling (confidence 0.35 < 0.70 gate)
   Total runtime: 14.6s
-]
-#pagebreak()
-
-#q-slide("7", "order fulfilment latency spike", "0.75 → AUTO-EXECUTE", c-teal)[
-\$ python query_live.py "order fulfilment delays caused by upstream pricing engine latency spike during peak hours"
-
-  RAG Top 3:
-  1  incidents.json   0.571 ~ partial match   [INC0043496] order-fulfilment P99 breach (1102ms)
-  2  incidents.json   0.565 ~ partial match   [INC0043448] order-fulfilment P99 breach (4926ms)
-  3  incidents.json   0.558 ~ partial match   [INC0043304] order-fulfilment P99 breach (798ms)
-
-  ⚠ No close precedent — best match 0.571. AI will deduce a remediation.
-
-  Recommended Job  : scale-up-replicas   |  Confidence : 0.75
-  Decision Gate    : ABOVE GATE --> AUTO-EXECUTE
-  Reasoning        : Upstream latency creates downstream throughput pressure;
-                     scaling replicas reduces per-instance load while root cause is addressed.
-
-  ✓ WOULD AUTO-EXECUTE — scale-up-replicas (conf 0.75 ≥ 0.70 gate)
-  Total runtime: 12.2s
-]
-#pagebreak()
-
-#q-slide("8", "notification service duplicate emails", "0.35 → PENDING REVIEW", c-pend)[
-\$ python query_live.py "notification service sending duplicate confirmation emails after every order event"
-
-  RAG Top 3:
-  1  incidents.json             0.687 ~ partial   [INC0041294] notif-svc duplicate PUSH notifications
-  2  incidents.json             0.520 ✗ weak       [INC0041158] notif-svc email queue backed up (6h delay)
-  3  INC0042468-notif-svc.md   0.467 ✗ weak       Auto-generated runbook: broken unsubscribe links (P2)
-
-  ✓ Strong precedent found — incidents.json (0.687)
-  [but matched push notifications, not email — semantic mismatch]
-
-  Recommended Job  : restart-service-with-memory-bump   |  Confidence : #text(fill: c-amber)[0.35  \<-- SELF-DOWNGRADED]
-  Decision Gate    : RULE-BASED FALLBACK
-  Reasoning        : Runbook context (INC0042468) used restart-with-memory-bump for config issue.
-                     Current incident involves email duplicates, not push notifications.
-                     Semantic mismatch between incident type and available context.
-
-  ⏸  PENDING HUMAN REVIEW — restart-service-with-memory-bump (conf 0.35 \< 0.70 gate)
-  Total runtime: 22.5s
-]
-#pagebreak()
-
-#q-slide("9", "supplier EDI orders dropped", "0.65 → PENDING REVIEW", c-pend)[
-\$ python query_live.py "supplier integration service dropping EDI purchase orders during XML schema validation"
-
-  RAG Top 3:
-  1  incidents.json   0.705 ~ partial   [INC0041737] supplier-integration EDI batch failure
-                                         (Supplier-31 schema version mismatch)
-  2  incidents.json   0.561 ~ partial   [INC0043383] supplier-integration ETL failure (11 retries)
-  3  incidents.json   0.542 ✗ weak      [INC0041195] supplier-integration EDI timeout (3,200 SKUs)
-
-  ✓ Strong precedent found — incidents.json (similarity 0.705)
-
-  Recommended Job  : force-inventory-sync   |  Confidence : #text(fill: c-amber)[0.65  \<-- plausible but not certain]
-  Decision Gate    : PENDING REVIEW
-  Reasoning        : EDI orders dropped during XML schema validation matches INC0041737 closely.
-                     force-inventory-sync addresses data pipeline stalls, not schema mismatches.
-                     Plausible mitigation, but not the correct root-cause fix. Correctly held.
-
-  ⏸  PENDING HUMAN REVIEW — force-inventory-sync (conf 0.65 \< 0.70 gate)
-  Total runtime: 25.7s
-]
-#pagebreak()
-
-#q-slide("10", "recommendation engine degraded", "0.45 → PENDING REVIEW", c-pend)[
-\$ python query_live.py "recommendation engine returning identical product suggestions for all users after model retraining"
-
-  RAG Top 3:
-  1  incidents.json   0.393 ✗ weak   [INC0041839] product-search autocomplete empty (Redis cache flush)
-  2  incidents.json   0.356 ✗ weak   [INC0043065] product-search feature flag misconfiguration (50%)
-  3  incidents.json   0.315 ✗ weak   [INC0043017] product-search feature flag misconfiguration (49%)
-
-  ⚠ No close precedent — best match 0.393. All matches from a different service.
-  Zero relevant knowledge base entries for the recommendation engine.
-
-  Recommended Job  : reindex-elasticsearch   |  Confidence : #text(fill: c-amber)[0.45  \<-- ACKNOWLEDGING LIMITS]
-  Decision Gate    : RULE-BASED FALLBACK
-  Reasoning        : Identical suggestions indicate stale/improperly updated index data.
-                     No recommendation-engine incidents in knowledge base. Cross-service inference
-                     only. Model self-downgraded — this is the system acknowledging its limits.
-
-  ⏸  PENDING HUMAN REVIEW — reindex-elasticsearch (conf 0.45 \< 0.70 gate)
-  Total runtime: 13.8s
 ]
 #pagebreak()
 
@@ -651,6 +609,41 @@
 #pagebreak()
 
 // ══════════════════════════════════════════════════════════════════
+// SLIDE OBS — OBSERVABILITY (light)
+// ══════════════════════════════════════════════════════════════════
+#light-slide[
+  #slide-label[Production Readiness]
+  #v(0.2cm)
+  #sh[Observability]
+
+  #grid(columns: (1fr, 1fr, 1fr), gutter: 0.5cm,
+    block(fill: bg-light2, stroke: (top: 1.5pt + c-teal, rest: 0.5pt + c-border),
+      radius: 4pt, inset: 8pt, width: 100%)[
+      #text(fill: c-teal, weight: "bold", size: 8pt, font: mono-font)[Log Every Step]
+      #v(0.15cm)
+      #text(fill: c-text, size: 8pt)[RAG top-K + similarity scores, LLM token counts + latency, every gate confidence and outcome, every Rundeck execution result.]
+    ],
+    block(fill: bg-light2, stroke: (top: 1.5pt + c-teal, rest: 0.5pt + c-border),
+      radius: 4pt, inset: 8pt, width: 100%)[
+      #text(fill: c-teal, weight: "bold", size: 8pt, font: mono-font)[Dashboards]
+      #v(0.15cm)
+      #text(fill: c-text, size: 8pt)[Confidence distribution over time, auto-execution rate, false positive rate, and P99 latency per pipeline stage.]
+    ],
+    block(fill: bg-light2, stroke: (top: 1.5pt + c-teal, rest: 0.5pt + c-border),
+      radius: 4pt, inset: 8pt, width: 100%)[
+      #text(fill: c-teal, weight: "bold", size: 8pt, font: mono-font)[Alerts]
+      #v(0.15cm)
+      #text(fill: c-text, size: 8pt)[Confidence distribution shift, fallback rate increase, and any Rundeck failure without a subsequent human resolution.]
+    ]
+  )
+  #v(0.25cm)
+  #line(length: 100%, stroke: 0.4pt + c-border)
+  #v(0.15cm)
+  #text(fill: c-dim, size: 7.5pt, font: mono-font)[Sudden confidence drops are a production smell: stale knowledge base, model version drift, or a retrieval-quality regression.]
+]
+#pagebreak()
+
+// ══════════════════════════════════════════════════════════════════
 // SLIDE 8 — TECH STACK (light)
 // ══════════════════════════════════════════════════════════════════
 #light-slide[
@@ -698,56 +691,170 @@
       radius: 4pt, inset: 8pt, width: 100%)[
       #text(fill: c-teal, weight: "bold", size: 8pt, font: mono-font)[Shadow Deployment Pipeline]
       #v(0.15cm)
-      #text(fill: c-text, size: 8pt)[A parallel shadow environment mirrors all live traffic and incoming incidents without taking any action. When the pipeline's recommendations have earned sufficient confidence, a single approval promotes the shadow's configuration to production and tears down the shadow instance. Zero-downtime, zero-guesswork rollout — ]
-      #text(fill: c-auto, weight: "bold", size: 8pt)[the system validates itself before it acts.]
+      #text(fill: c-text, size: 7.5pt)[A shadow environment mirrors live incidents without acting. Once recommendations earn sufficient confidence, a single approval promotes to production - zero-downtime, ]
+      #text(fill: c-auto, weight: "bold", size: 7.5pt)[the system validates itself before it acts.]
     ],
     block(fill: bg-light2, stroke: (top: 1.5pt + c-teal, rest: 0.5pt + c-border),
       radius: 4pt, inset: 8pt, width: 100%)[
       #text(fill: c-teal, weight: "bold", size: 8pt, font: mono-font)[Repository-Aware Context]
       #v(0.15cm)
-      #text(fill: c-text, size: 8pt)[Continuous indexing of service source repositories gives the LLM access to ]
-      #text(fill: c-auto, weight: "bold", size: 8pt)[code-level context — configuration files, dependency changes, recent commits —]
-      #text(fill: c-text, size: 8pt)[ when an incident's root cause demands investigation beyond historical tickets and runbooks. The knowledge base grows to match the depth of the problem.]
+      #text(fill: c-text, size: 7.5pt)[Continuous indexing of service repos gives the LLM ]
+      #text(fill: c-auto, weight: "bold", size: 7.5pt)[code-level context - config files, dependency changes, recent commits -]
+      #text(fill: c-text, size: 7.5pt)[ when a root cause needs investigation beyond tickets and runbooks.]
     ],
     block(fill: bg-light2, stroke: (top: 1.5pt + c-teal, rest: 0.5pt + c-border),
       radius: 4pt, inset: 8pt, width: 100%)[
       #text(fill: c-teal, weight: "bold", size: 8pt, font: mono-font)[Living Organisational Memory]
       #v(0.15cm)
-      #text(fill: c-text, size: 8pt)[Automatic ingestion of JIRA tickets, Confluence pages, and equivalent knowledge bases keeps the RAG context current with ]
-      #text(fill: c-auto, weight: "bold", size: 8pt)[the team's accumulated decisions, post-mortems, and architectural changes.]
-      #text(fill: c-text, size: 8pt)[ The system learns continuously from every resolved incident and every documented decision — whether or not it was the one that triaged it.]
+      #text(fill: c-text, size: 7.5pt)[Automatic ingestion of JIRA, Confluence, and equivalent knowledge bases keeps RAG context current with ]
+      #text(fill: c-auto, weight: "bold", size: 7.5pt)[the team's accumulated decisions and post-mortems.]
+      #text(fill: c-text, size: 7.5pt)[ The system learns from every resolved incident.]
     ]
   )
 ]
 #pagebreak()
 
-// ══════════════════════════════════════════════════════════════════
-// SLIDE 9 — CLOSING (dark)
-// ══════════════════════════════════════════════════════════════════
-#dark-slide[
-  #slide-label[Summary]
-  #v(0.3cm)
-  #text(fill: c-green, size: 16pt, weight: "bold", font: mono-font)[What This Demonstrates]
-  #v(0.15cm)
-  #line(length: 100%, stroke: 0.4pt + rgb("#1E3A1E"))
-  #v(0.3cm)
 
-  #for (n, txt) in (
-    ("01", "Production-pattern RAG pipeline with real similarity scoring"),
-    ("02", "LLM structured output with confidence-gated automation"),
-    ("03", "Human-in-the-loop safety by design, not by accident"),
-    ("04", "Extensible to real ServiceNow + Rundeck with config changes only"),
-  ) {
-    grid(
-      columns: (22pt, 1fr), gutter: 7pt, align: top,
-      text(fill: c-green, weight: "bold", size: 10pt, font: mono-font)[#n],
-      text(fill: rgb("#C8E6C9"), size: 10pt)[#txt]
-    )
-    line(length: 100%, stroke: 0.3pt + rgb("#1E3A1E"))
-    v(0.15cm)
-  }
+#q-slide("2", "payment-processor 500 errors", "0.95 -> AUTO-EXECUTE", c-teal)[
+\$ python query_live.py "payment processor returning 500 errors, transactions not completing..."
 
-  #place(bottom + right, dx: -1cm, dy: -0.6cm,
-    text(fill: rgb("#1E3A1E"), size: 7pt, font: mono-font)[ember\@ops:~\$ ops-knowledge-loop]
-  )
+  RAG Top 3:
+  1  incidents.json   0.495 ✗ weak match   [INC0043135] payment-processor 5xx spike (70%)
+  2  incidents.json   0.492 ✗ weak match   [INC0043231] payment-processor 5xx spike (72%)
+  3  incidents.json   0.488 ✗ weak match   [INC0043183] payment-processor 5xx spike (71%)
+
+  ⚠ No close precedent — best match 0.495. AI will deduce a remediation.
+  [weak RAG; model returns 0.95 via pattern recognition across three prior resolved incidents]
+
+  Recommended Job  : rollback-to-previous-version   |  Confidence : 0.95
+  Decision Gate    : AUTO-EXECUTE
+  Reasoning        : Three prior 5xx spikes resolved by rollback; standard mitigation confirmed.
+
+  ✓ WOULD AUTO-EXECUTE — rollback-to-previous-version (conf 0.95 ≥ 0.70 gate)
+  Total runtime: 8.2s
+]
+#pagebreak()
+
+#q-slide("4", "inventory sync stalled", "0.66 -> PENDING REVIEW", c-pend)[
+\$ python query_live.py "inventory sync stalled, stock levels on website not updating after warehouse batch job"
+
+  RAG Top 3:
+  1  incidents.json   0.675 ~ partial match   [INC0041047] inventory-sync batch job failed silently
+  2  incidents.json   0.656 ~ partial match   [INC0043477] inventory-sync data pipeline stall (75 min)
+  3  incidents.json   0.639 ~ partial match   [INC0042043] inventory-sync failing for 14 stores
+
+  ✓ Strong precedent found — incidents.json (similarity 0.675)
+
+  Recommended Job  : force-inventory-sync   |  Confidence : #text(fill: c-amber)[0.66  \<-- just below gate]
+  Decision Gate    : PENDING REVIEW
+  Reasoning        : Stalled sync mirrors INC0043477 pipeline-stall exactly; confidence 0.04 below gate.
+
+  ⏸  PENDING HUMAN REVIEW — force-inventory-sync (conf 0.66 \< 0.70 gate)
+  Total runtime: 15.4s
+]
+#pagebreak()
+
+#q-slide("5", "store POS tills unresponsive", "0.75 -> AUTO-EXECUTE", c-teal)[
+\$ python query_live.py "store POS system tills unresponsive, cashiers cannot process customer transactions"
+
+  RAG Top 3:
+  1  incidents.json   0.573 ~ partial match   [INC0043165] store-pos-system pipeline stall (75 min)
+  2  incidents.json   0.569 ~ partial match   [INC0043333] store-pos-system pipeline stall (75 min)
+  3  incidents.json   0.547 ✗ weak match      [INC0041062] store-pos-system API latency (Consul mesh)
+
+  ⚠ No close precedent — best match 0.573. AI will deduce a remediation.
+  [model correctly extrapolated from P1 Consul mesh outage (2,300 stores) resolved by config rollback]
+
+  Recommended Job  : rollback-to-previous-version   |  Confidence : 0.75
+  Decision Gate    : ABOVE GATE -> AUTO-EXECUTE
+  Reasoning        : P1 config rollback pattern matches despite low RAG similarity.
+
+  ✓ WOULD AUTO-EXECUTE — rollback-to-previous-version (conf 0.75 ≥ 0.70 gate)
+  Total runtime: 9.9s
+]
+#pagebreak()
+
+#q-slide("7", "order fulfilment latency spike", "0.75 -> AUTO-EXECUTE", c-teal)[
+\$ python query_live.py "order fulfilment delays caused by upstream pricing engine latency spike during peak hours"
+
+  RAG Top 3:
+  1  incidents.json   0.571 ~ partial match   [INC0043496] order-fulfilment P99 breach (1102ms)
+  2  incidents.json   0.565 ~ partial match   [INC0043448] order-fulfilment P99 breach (4926ms)
+  3  incidents.json   0.558 ~ partial match   [INC0043304] order-fulfilment P99 breach (798ms)
+
+  ⚠ No close precedent — best match 0.571. AI will deduce a remediation.
+
+  Recommended Job  : scale-up-replicas   |  Confidence : 0.75
+  Decision Gate    : ABOVE GATE -> AUTO-EXECUTE
+  Reasoning        : Upstream latency creates downstream throughput pressure;
+                     scaling replicas reduces per-instance load while root cause is addressed.
+
+  ✓ WOULD AUTO-EXECUTE — scale-up-replicas (conf 0.75 ≥ 0.70 gate)
+  Total runtime: 12.2s
+]
+#pagebreak()
+
+#q-slide("8", "notification service duplicate emails", "0.35 -> PENDING REVIEW", c-pend)[
+\$ python query_live.py "notification service sending duplicate confirmation emails after every order event"
+
+  RAG Top 3:
+  1  incidents.json             0.687 ~ partial   [INC0041294] notif-svc duplicate PUSH notifications
+  2  incidents.json             0.520 ✗ weak       [INC0041158] notif-svc email queue backed up (6h delay)
+  3  INC0042468-notif-svc.md   0.467 ✗ weak       Auto-generated runbook: broken unsubscribe links (P2)
+
+  ✓ Strong precedent found — incidents.json (0.687)
+  [but matched push notifications, not email — semantic mismatch]
+
+  Recommended Job  : restart-service-with-memory-bump   |  Confidence : #text(fill: c-amber)[0.35  \<-- SELF-DOWNGRADED]
+  Decision Gate    : RULE-BASED FALLBACK
+  Reasoning        : Runbook context (INC0042468) used restart-with-memory-bump for config issue.
+                     Current incident involves email duplicates, not push notifications.
+                     Semantic mismatch between incident type and available context.
+
+  ⏸  PENDING HUMAN REVIEW — restart-service-with-memory-bump (conf 0.35 \< 0.70 gate)
+  Total runtime: 22.5s
+]
+#pagebreak()
+
+#q-slide("9", "supplier EDI orders dropped", "0.65 -> PENDING REVIEW", c-pend)[
+\$ python query_live.py "supplier integration service dropping EDI purchase orders during XML schema validation"
+
+  RAG Top 3:
+  1  incidents.json   0.705 ~ partial   [INC0041737] supplier-integration EDI batch failure
+                                         (Supplier-31 schema version mismatch)
+  2  incidents.json   0.561 ~ partial   [INC0043383] supplier-integration ETL failure (11 retries)
+  3  incidents.json   0.542 ✗ weak      [INC0041195] supplier-integration EDI timeout (3,200 SKUs)
+
+  ✓ Strong precedent found — incidents.json (similarity 0.705)
+
+  Recommended Job  : force-inventory-sync   |  Confidence : #text(fill: c-amber)[0.65  \<-- plausible but not certain]
+  Decision Gate    : PENDING REVIEW
+  Reasoning        : EDI orders dropped during XML schema validation matches INC0041737 closely.
+                     force-inventory-sync addresses data pipeline stalls, not schema mismatches.
+                     Plausible mitigation, but not the correct root-cause fix. Correctly held.
+
+  ⏸  PENDING HUMAN REVIEW — force-inventory-sync (conf 0.65 \< 0.70 gate)
+  Total runtime: 25.7s
+]
+#pagebreak()
+
+#q-slide("10", "recommendation engine degraded", "0.45 -> PENDING REVIEW", c-pend)[
+\$ python query_live.py "recommendation engine returning identical product suggestions for all users after model retraining"
+
+  RAG Top 3:
+  1  incidents.json   0.393 ✗ weak   [INC0041839] product-search autocomplete empty (Redis cache flush)
+  2  incidents.json   0.356 ✗ weak   [INC0043065] product-search feature flag misconfiguration (50%)
+  3  incidents.json   0.315 ✗ weak   [INC0043017] product-search feature flag misconfiguration (49%)
+
+  ⚠ No close precedent — best match 0.393. All matches from a different service.
+  Zero relevant knowledge base entries for the recommendation engine.
+
+  Recommended Job  : reindex-elasticsearch   |  Confidence : #text(fill: c-amber)[0.45  \<-- ACKNOWLEDGING LIMITS]
+  Decision Gate    : RULE-BASED FALLBACK
+  Reasoning        : Identical suggestions indicate stale/improperly updated index data.
+                     No recommendation-engine incidents in knowledge base. Cross-service inference
+                     only. Model self-downgraded — this is the system acknowledging its limits.
+
+  ⏸  PENDING HUMAN REVIEW — reindex-elasticsearch (conf 0.45 \< 0.70 gate)
+  Total runtime: 13.8s
 ]

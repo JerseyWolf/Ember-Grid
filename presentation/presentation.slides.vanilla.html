@@ -208,6 +208,53 @@ li::before { content: "▸ "; color: var(--green); font-family: var(--mono); }
 }
 .tech-name { color: var(--teal); font-weight: 700; display: block; }
 
+/* prior art columns */
+.prior-art-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.1em; margin: 0.35em 0 0.45em; }
+.prior-col {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 0.55em 0.6em 0.5em;
+  box-shadow: inset 0 0 0 1px var(--bg2);
+}
+.prior-col.col-green { border-color: var(--green-dim); box-shadow: inset 0 0 0 1px #00FF4115; }
+.prior-col.col-teal  { border-color: #19E6C580; box-shadow: inset 0 0 0 1px #19E6C510; }
+.prior-col.col-amber { border-color: var(--amber-dim); box-shadow: inset 0 0 0 1px #FFC85715; }
+.prior-col-head {
+  font-family: var(--mono); font-size: 0.5em; font-weight: 700;
+  color: var(--green-dim); letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border);
+  margin: -0.55em -0.6em 0.45em; padding: 0.35em 0.55em;
+  background: var(--bg2);
+  white-space: nowrap; overflow: hidden;
+}
+.prior-col.col-teal .prior-col-head { color: var(--teal); }
+.prior-col.col-amber .prior-col-head { color: var(--amber); }
+.prior-chip {
+  font-family: var(--mono); font-size: 0.54em; font-weight: 700;
+  margin-bottom: 0.28em; display: block; line-height: 1.2;
+}
+.prior-col.col-green .prior-chip { color: var(--green); }
+.prior-col.col-teal  .prior-chip { color: var(--teal); }
+.prior-col.col-amber .prior-chip { color: var(--amber); }
+.prior-chip-sub { display: block; margin-top: 0.12em; font-weight: 600; opacity: 0.92; }
+.prior-col-title {
+  font-family: var(--mono); font-size: 0.64em; font-weight: 700;
+  color: var(--text); line-height: 1.15; margin-bottom: 0.1em;
+}
+.prior-col-meta { font-size: 0.54em; color: var(--text-dim); margin-bottom: 0.28em; line-height: 1.15; }
+.prior-col ul { list-style: none; padding: 0; margin: 0; }
+.prior-col li {
+  font-size: 0.54em; line-height: 1.2; color: var(--text);
+  margin-bottom: 0.18em; padding-left: 0;
+}
+.prior-col li::before { content: "▸ "; color: var(--green); font-family: var(--mono); }
+.prior-col-tagline {
+  font-size: 0.52em; color: var(--text-dim); font-style: italic;
+  margin-top: 0.28em; padding-top: 0.28em; border-top: 1px solid var(--border);
+  line-height: 1.12;
+}
+
 /* gate cards */
 .gate-cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.7em; margin: 0.5em 0; }
 .gate-card { background: var(--bg2); border: 1px solid var(--border); border-top: 2px solid var(--amber); border-radius: 6px; padding: 0.7em; }
@@ -258,13 +305,62 @@ li::before { content: "▸ "; color: var(--green); font-family: var(--mono); }
     <span class="slide-label">ops-knowledge-loop</span>
     <span class="title-mono">ops-knowledge-loop</span>
     <div class="title-subtitle">AI-Powered Incident Triage &nbsp;·&nbsp; Ember Grid</div>
-    <div class="title-tagline">▸ From alert to remediation in under 10 seconds</div>
+    <div class="title-tagline">▸ From alert to remediation in under 2 minutes</div>
     <pre class="title-ascii">┌──────────────────────────────────────────────────────────┐
-│  INCIDENT → RAG → LLM → GATE → RUNDECK → TICKET CLOSED  │
+│  INCIDENT -> RAG -> LLM -> GATE -> RUNDECK -> TICKET CLOSED  │
 └──────────────────────────────────────────────────────────┘</pre>
   </section>
 
-  <!-- ══ SLIDE 2 — THE PROBLEM ════════════════════════════════════ -->
+  <!-- ══ SLIDE 2 — PRIOR ART ═══════════════════════════════════════ -->
+  <section class="slide" id="slide-prior" data-fragments="4">
+    <span class="slide-label">Background</span>
+    <h2>Prior Art</h2>
+    <p style="font-size:0.68em;color:var(--text-dim);margin-bottom:0.5em">Three projects that map directly onto this one.</p>
+    <div class="prior-art-cols">
+        <div class="prior-col col-green frag">
+            <div class="prior-col-head">┌─ WOLF FRAMEWORK ─────────────────┐</div>
+            <span class="prior-chip">LangChain · ChromaDB · MCP · local LLM</span>
+            <div class="prior-col-title">WOLF Framework</div>
+            <div class="prior-col-meta">Open-source AI-assisted game dev environment · 2025–present</div>
+            <ul>
+                <li>LangChain + ChromaDB + LiteLLM RAG via MCP server</li>
+                <li>Headless SimBot: evidence-gate-action loop</li>
+                <li>Local (Ollama) and cloud/paid variants</li>
+            </ul>
+            <p class="prior-col-tagline">Same RAG stack and architectural pattern as this project.</p>
+        </div>
+        <div class="prior-col col-teal frag">
+            <div class="prior-col-head">┌─ QVC / QURATE RETAIL ────────────┐</div>
+            <span class="prior-chip">~850 services · 5y zero audit breach</span>
+            <div class="prior-col-title">Cloud Migration</div>
+            <div class="prior-col-meta">~850 Kubernetes microservices · 2020–2024</div>
+            <ul>
+                <li>Migrated off Jenkins, Spinnaker, Rancher, Bitbucket, Ansible fully to Azure DevOps</li>
+                <li>Live multi-DC AEM deployments; up to 40 stakeholders</li>
+                <li>Zero audit breach over 5 years; ServiceNow tracked</li>
+            </ul>
+            <p class="prior-col-tagline">Same retail-scale infrastructure, ServiceNow, and gating discipline.</p>
+        </div>
+        <div class="prior-col col-amber frag">
+            <div class="prior-col-head">┌─ MULTI-GEO MOBILE PIPELINE ──────┐</div>
+            <span class="prior-chip">Release: 3h → 30min<span class="prior-chip-sub">PR acceptance: 2h → 20min</span></span>
+            <div class="prior-col-title">Build-Test-Deploy</div>
+            <div class="prior-col-meta">Bitbucket · Jenkins · Artifactory · Jira · Consul</div>
+            <ul>
+                <li>Multi-geo mobile build-test-deploy pipeline</li>
+                <li>Release effort: 3 hours → 30 minutes</li>
+                <li>Automated PR acceptance: 2 hours → 20 minutes</li>
+                <li>Stage tracking, drift detection, rollback paths</li>
+            </ul>
+            <p class="prior-col-tagline">Same compression pattern applied to incident response.</p>
+        </div>
+    </div>
+    <p class="frag" style="font-family:var(--mono);font-size:0.5em;color:var(--text-dim);margin-top:0.4em;border-top:1px solid var(--border);padding-top:0.3em">
+      8+ years automotive &amp; UK retail · Ansible · ServiceNow · multi-geo release engineering · RAG / MCP / local-LLM
+    </p>
+  </section>
+
+  <!-- ══ SLIDE 3 — THE PROBLEM ════════════════════════════════════ -->
   <section class="slide" id="slide-1" data-fragments="4">
     <span class="slide-label">Context</span>
     <h2>The On-Call Problem</h2>
@@ -297,17 +393,17 @@ li::before { content: "▸ "; color: var(--green); font-family: var(--mono); }
     <h2>How It Works</h2>
     <div class="pipeline" id="pipeline">
       <div class="pipe-stage" id="ps1"><span class="stage-num">[01]</span><span class="stage-label">INCIDENT</span><span class="stage-desc">ServiceNow ticket free-text description</span></div>
-      <div class="pipe-arrow">→</div>
+      <div class="pipe-arrow">-></div>
       <div class="pipe-stage" id="ps2"><span class="stage-num">[02]</span><span class="stage-label">RAG SEARCH</span><span class="stage-desc">sentence-transformers + ChromaDB top-3</span></div>
-      <div class="pipe-arrow">→</div>
-      <div class="pipe-stage" id="ps3"><span class="stage-num">[03]</span><span class="stage-label">LLM REASONING</span><span class="stage-desc">Ollama qwen3:14b → structured JSON</span></div>
-      <div class="pipe-arrow">→</div>
+      <div class="pipe-arrow">-></div>
+      <div class="pipe-stage" id="ps3"><span class="stage-num">[03]</span><span class="stage-label">LLM REASONING</span><span class="stage-desc">Ollama qwen3:14b -> structured JSON</span></div>
+      <div class="pipe-arrow">-></div>
       <div class="pipe-stage" id="ps4"><span class="stage-num">[04]</span><span class="stage-label">DECISION GATE</span><span class="stage-desc">≥0.70 auto-fire · &lt;0.70 human review</span></div>
-      <div class="pipe-arrow">→</div>
+      <div class="pipe-arrow">-></div>
       <div class="pipe-stage" id="ps5"><span class="stage-num">[05]</span><span class="stage-label">OUTCOME</span><span class="stage-desc">Rundeck job fires or engineer briefed</span></div>
     </div>
     <div class="callout-box frag">
-      ▸ Fully local &nbsp;·&nbsp; No data leaves the machine &nbsp;·&nbsp; No API costs &nbsp;·&nbsp; ~10s end-to-end
+      ▸ Fully local &nbsp;·&nbsp; No data leaves the machine &nbsp;·&nbsp; No API costs &nbsp;·&nbsp; ~30s end-to-end
     </div>
   </section>
 
@@ -320,7 +416,7 @@ li::before { content: "▸ "; color: var(--green); font-family: var(--mono); }
         <div class="kb-col-label">▸ Incident History</div>
         <div class="frag"><div class="card card-accent"><p>500+ synthetic incidents across 17 services</p></div></div>
         <div class="frag"><div class="card card-accent" style="margin-top:0.35em"><p>Each indexed as a vector embedding in ChromaDB</p></div></div>
-        <div class="frag"><div class="card card-accent" style="margin-top:0.35em"><p style="font-family:var(--mono);font-size:0.88em;color:var(--text-dim)">OOM kills · latency spikes · ETL failures<br>EDI schema mismatches · POS outages<br>loyalty bugs · notification duplicates</p></div></div>
+        <div class="frag"><div class="card card-accent" style="margin-top:0.35em"><p style="font-family:var(--mono);font-size:0.88em;color:var(--text-dim)">OOM kills · latency spikes · ETL failures · EDI mismatches · POS outages · loyalty bugs · notification duplicates</p></div></div>
       </div>
       <div>
         <div class="kb-col-label">▸ Runbooks</div>
@@ -443,7 +539,7 @@ li::before { content: "▸ "; color: var(--green); font-family: var(--mono); }
   <!-- Q1 -->
   <section class="slide" id="slide-6" data-fragments="0">
     <span class="slide-label">Live Output — Query 1 / 10</span>
-    <h3>checkout-service OOM kill &nbsp;·&nbsp; <span style="color:var(--teal)">0.95 → AUTO-EXECUTE</span></h3>
+    <h3>checkout-service OOM kill &nbsp;·&nbsp; <span style="color:var(--teal)">0.95 -> AUTO-EXECUTE</span></h3>
     <div class="terminal-panel" style="margin-top:0.5em;font-size:0.56em">
 <span class="t-cmd">$ python query_live.py "checkout service OOM kill, container hitting memory limit and restarting repeatedly under load"</span>
 
@@ -478,7 +574,7 @@ Total runtime: 8.7s</span></div>
   <!-- Q3 -->
   <section class="slide" id="slide-q3" data-fragments="0">
     <span class="slide-label">Live Output — Query 3 / 10</span>
-    <h3>product-search unresponsive after deploy &nbsp;·&nbsp; <span style="color:var(--teal)">0.75 → AUTO-EXECUTE</span></h3>
+    <h3>product-search unresponsive after deploy &nbsp;·&nbsp; <span style="color:var(--teal)">0.75 -> AUTO-EXECUTE</span></h3>
     <div class="terminal-panel" style="margin-top:0.5em;font-size:0.56em">
 <span class="t-cmd">$ python query_live.py "product search returning empty results, search index unresponsive after deployment"</span>
 
@@ -499,7 +595,7 @@ Step 1 — Searching knowledge base...
 Step 2 — Requesting AI remediation recommendation...
   Recommended Job  : </span><span class="t-ok">reindex-elasticsearch</span>
 <span class="t-dim">  Confidence       : </span><span class="t-ok">0.75</span>
-<span class="t-dim">  Decision Gate    : </span><span class="t-auto">ABOVE GATE → AUTO-EXECUTE</span>
+<span class="t-dim">  Decision Gate    : </span><span class="t-auto">ABOVE GATE -> AUTO-EXECUTE</span>
 <span class="t-dim">  Reasoning        : Unresponsive ES index after deployment; runbook + incident both confirm fix.
 </span>
 <span class="t-dim">╭──────────────────────────────────────────────────────────────────────────────────────╮</span>
@@ -515,7 +611,7 @@ Total runtime: 9.9s</span></div>
   <!-- Q6 -->
   <section class="slide" id="slide-q6" data-fragments="0">
     <span class="slide-label">Live Output — Query 6 / 10</span>
-    <h3>loyalty service not awarding points &nbsp;·&nbsp; <span style="color:var(--amber)">0.35 → PENDING REVIEW</span></h3>
+    <h3>loyalty service not awarding points &nbsp;·&nbsp; <span style="color:var(--amber)">0.35 -> PENDING REVIEW</span></h3>
     <div class="terminal-panel" style="margin-top:0.5em;font-size:0.56em">
 <span class="t-cmd">$ python query_live.py "loyalty service not awarding points after purchase, customer accounts not updating"</span>
 
@@ -600,60 +696,6 @@ Total runtime: 14.6s</span></div>
     </p>
   </section>
 
-  <!-- ══ SLIDE 8 — TECH STACK ══════════════════════════════════════ -->
-  <section class="slide" id="slide-8" data-fragments="9">
-    <span class="slide-label">Technology</span>
-    <h2>Stack</h2>
-    <div class="stack-grid">
-      <div class="stack-chip frag"><span class="tech-name">Python 3.11</span>Core pipeline</div>
-      <div class="stack-chip frag"><span class="tech-name">ChromaDB</span>Vector store</div>
-      <div class="stack-chip frag"><span class="tech-name">sentence-transformers</span>all-MiniLM-L6-v2</div>
-      <div class="stack-chip frag"><span class="tech-name">Ollama + qwen3:14b</span>Local LLM · 9.3GB · Q4_K_M · RTX 4090</div>
-      <div class="stack-chip frag"><span class="tech-name">Flask</span>Ops dashboard</div>
-      <div class="stack-chip frag"><span class="tech-name">Rich</span>CLI output formatting</div>
-      <div class="stack-chip frag"><span class="tech-name">ServiceNow API</span>Mocked ticket source</div>
-      <div class="stack-chip frag"><span class="tech-name">Rundeck</span>Mocked job execution</div>
-    </div>
-    <div class="callout-box frag" style="margin-top:0.8em">
-      ▸ Runs entirely on local hardware &nbsp;·&nbsp; Zero external API calls &nbsp;·&nbsp; Zero ongoing cost
-    </div>
-  </section>
-
-  <!-- ══ SLIDE FUTURE — WHERE THIS GOES NEXT ═══════════════════════ -->
-  <section class="slide" id="slide-future" data-fragments="3">
-    <span class="slide-label">Roadmap</span>
-    <h2>Where This Goes Next</h2>
-    <div class="gate-cards" style="grid-template-columns:1fr 1fr 1fr;margin-top:0.8em">
-      <div class="gate-card frag">
-        <div class="service-label" style="color:var(--teal)">Shadow Deployment Pipeline</div>
-        <p>A parallel shadow environment mirrors all live traffic and incoming incidents without taking any action. When the pipeline's recommendations have earned sufficient confidence, a single approval promotes the shadow's configuration to production and tears down the shadow instance. Zero-downtime, zero-guesswork rollout — <strong style="color:var(--green)">the system validates itself before it acts.</strong></p>
-      </div>
-      <div class="gate-card frag">
-        <div class="service-label" style="color:var(--teal)">Repository-Aware Context</div>
-        <p>Continuous indexing of service source repositories gives the LLM access to <strong style="color:var(--green)">code-level context — configuration files, dependency changes, recent commits —</strong> when an incident's root cause demands investigation beyond historical tickets and runbooks. The knowledge base grows to match the depth of the problem.</p>
-      </div>
-      <div class="gate-card frag">
-        <div class="service-label" style="color:var(--teal)">Living Organisational Memory</div>
-        <p>Automatic ingestion of JIRA tickets, Confluence pages, and equivalent knowledge bases keeps the RAG context current with <strong style="color:var(--green)">the team's accumulated decisions, post-mortems, and architectural changes.</strong> The system learns continuously from every resolved incident and every documented decision — whether or not it was the one that triaged it.</p>
-      </div>
-    </div>
-  </section>
-
-
-
-  <!-- ══ SLIDE BACKLOG — NEXT ON THE LIST ═══════════════════════════ -->
-  <section class="slide" id="slide-backlog" data-fragments="5">
-    <span class="slide-label">Roadmap</span>
-    <h2>Next on the List</h2>
-    <div class="stack-grid" style="grid-template-columns:1fr 1fr;gap:0.45em;margin-top:0.7em">
-      <div class="stack-chip frag"><span class="tech-name">01 · Feedback Loop</span>Engineer overrides become high-signal labelled examples that improve future recommendations automatically.</div>
-      <div class="stack-chip frag"><span class="tech-name">02 · Multi-Incident Correlation</span>When five services degrade at once, switch to cascading-failure reasoning instead of isolated ticket triage.</div>
-      <div class="stack-chip frag"><span class="tech-name">03 · Confidence Calibration</span>Verify that 0.75 confidence means roughly 75% correct using a held-out labelled set and reliability diagram.</div>
-      <div class="stack-chip frag"><span class="tech-name">04 · Streaming Output</span>Stream reasoning token by token so engineers can interrupt a bad reasoning path early.</div>
-    </div>
-    <div class="callout-box frag" style="margin-top:0.7em">▸ Slack / PagerDuty integration brings pending-review recommendations into the engineer's existing workflow.</div>
-  </section>
-
   <!-- ══ SLIDE OBS — OBSERVABILITY ══════════════════════════════════ -->
   <section class="slide" id="slide-obs" data-fragments="4">
     <span class="slide-label">Production Readiness</span>
@@ -666,45 +708,50 @@ Total runtime: 14.6s</span></div>
     <p class="frag" style="font-family:var(--mono);font-size:0.64em;color:var(--text-dim);margin-top:0.8em;border-top:1px solid var(--border);padding-top:0.5em">Sudden confidence drops are a production smell: stale knowledge base, model drift, or retrieval regression.</p>
   </section>
 
-  <!-- ══ SLIDE PROD — FROM DEMO TO PRODUCTION ══════════════════════ -->
-  <section class="slide" id="slide-prod" data-fragments="5">
-    <span class="slide-label">Production Path</span>
-    <h2>From Demo to Production</h2>
-    <div class="pipeline" style="margin-top:0.8em">
-      <div class="pipe-stage frag"><span class="stage-num">01</span><span>ServiceNow mock</span><span class="arrow">→</span><span>real webhook API</span></div>
-      <div class="pipe-stage frag"><span class="stage-num">02</span><span>ChromaDB local</span><span class="arrow">→</span><span>managed vector store</span></div>
-      <div class="pipe-stage frag"><span class="stage-num">03</span><span>Ollama local</span><span class="arrow">→</span><span>hosted or private LLM endpoint</span></div>
-      <div class="pipe-stage frag"><span class="stage-num">04</span><span>single demo run</span><span class="arrow">→</span><span>queued concurrent triage</span></div>
+  <!-- ══ SLIDE 8 — TECH STACK ══════════════════════════════════════ -->
+  <section class="slide" id="slide-8" data-fragments="0">
+    <span class="slide-label">Technology</span>
+    <h2>Stack</h2>
+    <div class="stack-grid">
+      <div class="stack-chip"><span class="tech-name">Python 3.11</span>Core pipeline</div>
+      <div class="stack-chip"><span class="tech-name">ChromaDB</span>Vector store</div>
+      <div class="stack-chip"><span class="tech-name">sentence-transformers</span>all-MiniLM-L6-v2</div>
+      <div class="stack-chip"><span class="tech-name">Ollama + qwen3:14b</span>Local LLM · 9.3GB · Q4_K_M · RTX 4090</div>
+      <div class="stack-chip"><span class="tech-name">Flask</span>Ops dashboard</div>
+      <div class="stack-chip"><span class="tech-name">Rich</span>CLI output formatting</div>
+      <div class="stack-chip"><span class="tech-name">ServiceNow API</span>Mocked ticket source</div>
+      <div class="stack-chip"><span class="tech-name">Rundeck</span>Mocked job execution</div>
     </div>
-    <div class="callout-box frag" style="margin-top:0.8em">▸ Retrieval at scale improves recall first, then needs mitigation: better embeddings, service namespace filtering, and BM25 + vector search.</div>
+    <div class="callout-box" style="margin-top:0.8em">
+      ▸ Runs entirely on local hardware &nbsp;·&nbsp; Zero external API calls &nbsp;·&nbsp; Zero ongoing cost
+    </div>
   </section>
 
-  <!-- ══ SLIDE 9 — CLOSING ═════════════════════════════════════════ -->
-  <section class="slide" id="slide-9" data-fragments="4">
-    <span class="slide-label">Summary</span>
-    <h2>What This Demonstrates</h2>
-    <ul class="closing-bullets">
-      <li class="frag"><span class="bullet-num">01</span>Production-pattern RAG pipeline with real similarity scoring</li>
-      <li class="frag"><span class="bullet-num">02</span>LLM structured output with confidence-gated automation</li>
-      <li class="frag"><span class="bullet-num">03</span>Human-in-the-loop safety by design, not by accident</li>
-      <li class="frag"><span class="bullet-num">04</span>Extensible to real ServiceNow + Rundeck with config changes only</li>
-    </ul>
+  <!-- ══ SLIDE FUTURE — WHERE THIS GOES NEXT ═══════════════════════ -->
+  <section class="slide" id="slide-future" data-fragments="3">
+    <span class="slide-label">Roadmap</span>
+    <h2>Where This Goes Next</h2>
+    <div class="gate-cards" style="grid-template-columns:1fr 1fr 1fr;margin-top:0.8em">
+      <div class="gate-card frag">
+        <div class="service-label" style="color:var(--teal)">Shadow Deployment Pipeline</div>
+        <p>A shadow environment mirrors live incidents without acting. Once recommendations earn sufficient confidence, a single approval promotes to production - zero-downtime, <strong style="color:var(--green)">the system validates itself before it acts.</strong></p>
+      </div>
+      <div class="gate-card frag">
+        <div class="service-label" style="color:var(--teal)">Repository-Aware Context</div>
+        <p>Continuous indexing of service repos gives the LLM <strong style="color:var(--green)">code-level context - config files, dependency changes, recent commits -</strong> when a root cause needs investigation beyond tickets and runbooks.</p>
+      </div>
+      <div class="gate-card frag">
+        <div class="service-label" style="color:var(--teal)">Living Organisational Memory</div>
+        <p>Automatic ingestion of JIRA, Confluence, and equivalent knowledge bases keeps RAG context current with <strong style="color:var(--green)">the team's accumulated decisions and post-mortems.</strong> The system learns from every resolved incident.</p>
+      </div>
+    </div>
   </section>
 
-
-
-  <!-- ══ APPENDIX — ADDITIONAL TERMINAL OUTPUTS ════════════════════ -->
-  <section class="slide" id="slide-ax" data-fragments="2">
-    <span class="slide-label">Appendix</span>
-    <h2>Additional Terminal Outputs</h2>
-    <div class="callout-box frag" style="margin-top:1em">▸ Seven extra incident runs are kept here for deeper Q&amp;A if the manager wants to inspect the wider behaviour set.</div>
-    <div class="auto-counter frag" style="margin-top:1em">Main walkthrough kept <span>Q1</span>, <span>Q3</span>, and <span class="pend-n">Q6</span>; appendix keeps Q2, Q4, Q5, Q7, Q8, Q9, and Q10.</div>
-  </section>
 
 
   <section class="slide" id="slide-q2" data-fragments="0">
     <span class="slide-label">Live Output — Query 2 / 10</span>
-    <h3>payment-processor 500 errors &nbsp;·&nbsp; <span style="color:var(--teal)">0.95 → AUTO-EXECUTE</span></h3>
+    <h3>payment-processor 500 errors &nbsp;·&nbsp; <span style="color:var(--teal)">0.95 -> AUTO-EXECUTE</span></h3>
     <div class="terminal-panel" style="margin-top:0.5em;font-size:0.56em">
 <span class="t-cmd">$ python query_live.py "payment processor returning 500 errors, transactions not completing at checkout"</span>
 
@@ -737,7 +784,7 @@ Total runtime: 8.2s</span></div>
 
   <section class="slide" id="slide-q4" data-fragments="0">
     <span class="slide-label">Live Output — Query 4 / 10</span>
-    <h3>inventory sync stalled &nbsp;·&nbsp; <span style="color:var(--amber)">0.66 → PENDING REVIEW</span></h3>
+    <h3>inventory sync stalled &nbsp;·&nbsp; <span style="color:var(--amber)">0.66 -> PENDING REVIEW</span></h3>
     <div class="terminal-panel" style="margin-top:0.5em;font-size:0.56em">
 <span class="t-cmd">$ python query_live.py "inventory sync stalled, stock levels on website not updating after warehouse batch job"</span>
 
@@ -770,7 +817,7 @@ Total runtime: 15.4s</span></div>
 
   <section class="slide" id="slide-q5" data-fragments="0">
     <span class="slide-label">Live Output — Query 5 / 10</span>
-    <h3>store POS tills unresponsive &nbsp;·&nbsp; <span style="color:var(--teal)">0.75 → AUTO-EXECUTE</span></h3>
+    <h3>store POS tills unresponsive &nbsp;·&nbsp; <span style="color:var(--teal)">0.75 -> AUTO-EXECUTE</span></h3>
     <div class="terminal-panel" style="margin-top:0.5em;font-size:0.56em">
 <span class="t-cmd">$ python query_live.py "store POS system tills unresponsive, cashiers cannot process customer transactions"</span>
 
@@ -791,7 +838,7 @@ Step 1 — Searching knowledge base...
 Step 2 — Requesting AI remediation recommendation...
   Recommended Job  : </span><span class="t-ok">rollback-to-previous-version</span>
 <span class="t-dim">  Confidence       : </span><span class="t-ok">0.75</span>
-<span class="t-dim">  Decision Gate    : </span><span class="t-auto">ABOVE GATE → AUTO-EXECUTE</span>
+<span class="t-dim">  Decision Gate    : </span><span class="t-auto">ABOVE GATE -> AUTO-EXECUTE</span>
 <span class="t-dim">  Reasoning        : P1 Consul mesh outage (2,300 stores) resolved by config rollback. Pattern matches.
 </span>
 <span class="t-dim">╭──────────────────────────────────────────────────────────────────────────────────────╮</span>
@@ -803,7 +850,7 @@ Total runtime: 9.9s</span></div>
 
   <section class="slide" id="slide-q7" data-fragments="0">
     <span class="slide-label">Live Output — Query 7 / 10</span>
-    <h3>order fulfilment latency spike &nbsp;·&nbsp; <span style="color:var(--teal)">0.75 → AUTO-EXECUTE</span></h3>
+    <h3>order fulfilment latency spike &nbsp;·&nbsp; <span style="color:var(--teal)">0.75 -> AUTO-EXECUTE</span></h3>
     <div class="terminal-panel" style="margin-top:0.5em;font-size:0.56em">
 <span class="t-cmd">$ python query_live.py "order fulfilment delays caused by upstream pricing engine latency spike during peak hours"</span>
 
@@ -824,8 +871,8 @@ Step 1 — Searching knowledge base...
 Step 2 — Requesting AI remediation recommendation...
   Recommended Job  : </span><span class="t-ok">scale-up-replicas</span>
 <span class="t-dim">  Confidence       : </span><span class="t-ok">0.75</span>
-<span class="t-dim">  Decision Gate    : </span><span class="t-auto">ABOVE GATE → AUTO-EXECUTE</span>
-<span class="t-dim">  Reasoning        : Upstream latency → downstream pressure; scaling reduces per-instance load.
+<span class="t-dim">  Decision Gate    : </span><span class="t-auto">ABOVE GATE -> AUTO-EXECUTE</span>
+<span class="t-dim">  Reasoning        : Upstream latency -> downstream pressure; scaling reduces per-instance load.
 </span>
 <span class="t-dim">╭──────────────────────────────────────────────────────────────────────────────────────╮</span>
 <span class="t-auto">│ ✓ WOULD AUTO-EXECUTE  —  scale-up-replicas  (confidence 0.75 ≥ 0.70 gate)           │</span>
@@ -836,7 +883,7 @@ Total runtime: 12.2s</span></div>
 
   <section class="slide" id="slide-q8" data-fragments="0">
     <span class="slide-label">Live Output — Query 8 / 10</span>
-    <h3>notification service duplicate emails &nbsp;·&nbsp; <span style="color:var(--amber)">0.35 → PENDING REVIEW</span></h3>
+    <h3>notification service duplicate emails &nbsp;·&nbsp; <span style="color:var(--amber)">0.35 -> PENDING REVIEW</span></h3>
     <div class="terminal-panel" style="margin-top:0.5em;font-size:0.56em">
 <span class="t-cmd">$ python query_live.py "notification service sending duplicate confirmation emails to customers after every order event"</span>
 
@@ -872,7 +919,7 @@ Total runtime: 22.5s</span></div>
 
   <section class="slide" id="slide-q9" data-fragments="0">
     <span class="slide-label">Live Output — Query 9 / 10</span>
-    <h3>supplier EDI orders dropped &nbsp;·&nbsp; <span style="color:var(--amber)">0.65 → PENDING REVIEW</span></h3>
+    <h3>supplier EDI orders dropped &nbsp;·&nbsp; <span style="color:var(--amber)">0.65 -> PENDING REVIEW</span></h3>
     <div class="terminal-panel" style="margin-top:0.5em;font-size:0.56em">
 <span class="t-cmd">$ python query_live.py "supplier integration service dropping EDI purchase orders during XML schema validation"</span>
 
@@ -908,7 +955,7 @@ Total runtime: 25.7s</span></div>
 
   <section class="slide" id="slide-q10" data-fragments="0">
     <span class="slide-label">Live Output — Query 10 / 10</span>
-    <h3>recommendation engine degraded &nbsp;·&nbsp; <span style="color:var(--amber)">0.45 → PENDING REVIEW</span></h3>
+    <h3>recommendation engine degraded &nbsp;·&nbsp; <span style="color:var(--amber)">0.45 -> PENDING REVIEW</span></h3>
     <div class="terminal-panel" style="margin-top:0.5em;font-size:0.56em">
 <span class="t-cmd">$ python query_live.py "recommendation engine returning identical product suggestions for all users after overnight model retraining"</span>
 
@@ -944,7 +991,7 @@ Total runtime: 13.8s</span></div>
 </div><!-- /deck -->
 
 <button id="nav-prev" title="Previous slide (← or Backspace)">‹</button>
-<button id="nav-next" title="Next slide (→ or Space)">›</button>
+<button id="nav-next" title="Next slide (-> or Space)">›</button>
 
 <div id="status-bar">
   <span class="prompt">ember@ops:~$</span>

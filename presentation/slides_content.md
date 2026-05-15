@@ -7,11 +7,52 @@
 
 **Title:** ops-knowledge-loop  
 **Subtitle:** AI-Powered Incident Triage · Ember Grid  
-**Tagline:** From alert to remediation in under 10 seconds
+**Tagline:** From alert to remediation in under 2 minutes
 
 ---
 
-## SLIDE 2 — The Problem
+## SLIDE 2 — Prior Art
+
+**Heading:** Prior Art
+
+**Subheading:** Three projects that map directly onto this one.
+
+**Column 1 — WOLF Framework**  
+*Open-source AI-assisted game dev environment · 2025–present*  
+**Chip:** LangChain · ChromaDB · MCP · local LLM
+
+- Same RAG stack this project runs on: LangChain + ChromaDB + LiteLLM, indexed against a live codebase and exposed to a coding agent through a dedicated MCP server.
+- Headless SimBot simulation engine — runs automated tests across concurrent sessions, logs the evidence, and feeds an iterative optimiser. Same evidence-gate-action loop as ops-knowledge-loop.
+- Two deployment variants: fully local zero-cost (Ollama, open-source models) and cloud/paid. Same architectural choice made here.
+
+*Same RAG stack and architectural pattern as this project.*
+
+**Column 2 — QVC / Qurate Retail · Cloud Migration**  
+*~850 Kubernetes microservices · 2020–2024*  
+**Chip:** ~850 services · 5y zero audit breach
+
+- Migrated off Jenkins, Spinnaker, Rancher, Bitbucket, Ansible fully to Azure DevOps (~850 microservices). Two-person team.
+- Ran live multi-data-centre AEM production deployments — up to 40 stakeholders, weekly cadence, manual traffic switching, nginx validation, rollback.
+- Zero audit breach record over 5 years, every deployment tracked in ServiceNow.
+
+*Same retail-scale infrastructure, ServiceNow, and gating discipline.*
+
+**Column 3 — Multi-Geo Mobile Build-Test-Deploy**  
+*Bitbucket · Jenkins · Artifactory · Jira · Consul · 2020–2024*  
+**Chip:** Release: 3h → 30min · PR acceptance: 2h → 20min
+
+- Built and instrumented a multi-geo mobile release pipeline spanning Bitbucket, Jenkins, Artifactory, Jira, and Consul service discovery.
+- Release effort reduced from 3 hours to 30 minutes.
+- Automated PR acceptance checks reduced from 2 hours to 20 minutes.
+- Stage-level tracking, drift detection, and rollback paths — same observability discipline this project applies to RAG, LLM, and gate metrics.
+
+*Same compression pattern this project applies to incident response.*
+
+**Footer:** 8+ years across automotive and UK retail · Ansible-driven deployments · ServiceNow compliance · multi-geo release engineering · RAG / MCP / local-LLM pipelines.
+
+---
+
+## SLIDE 3 — The Problem
 
 **Heading:** The On-Call Problem
 
@@ -23,11 +64,11 @@
 
 ---
 
-## SLIDE 3 — System Architecture
+## SLIDE 4 — System Architecture
 
 **Heading:** How It Works
 
-Pipeline stages (left → right):
+Pipeline stages (left -> right):
 
 1. **INCIDENT ARRIVES** — ServiceNow ticket (mocked), free-text description
 2. **RAG SEARCH** — sentence-transformers embeds the query, ChromaDB returns top 3 semantically similar past incidents + runbook chunks
@@ -35,11 +76,11 @@ Pipeline stages (left → right):
 4. **DECISION GATE** — if confidence ≥ 0.70, Rundeck job fires automatically; below 0.70, routes to human review with full context
 5. **OUTCOME** — ticket closes automatically or engineer gets a pre-reasoned recommendation
 
-**Emphasis:** Fully local · No data leaves the machine · No API costs
+**Emphasis:** Fully local · No data leaves the machine · No API costs · ~30s end-to-end
 
 ---
 
-## SLIDE 4 — The Knowledge Base
+## SLIDE 5 — The Knowledge Base
 
 **Heading:** What the RAG Searches
 
@@ -57,7 +98,7 @@ Pipeline stages (left → right):
 
 ---
 
-## SLIDE 5 — The Dashboard
+## SLIDE 6 — The Dashboard
 
 **Heading:** Ops Dashboard
 
@@ -72,7 +113,7 @@ Dashboard features:
 
 ---
 
-## SLIDE 6 — Live Demo Results
+## SLIDE 7 — Live Demo Results
 
 **Heading:** 10 Queries · Live Run
 
@@ -99,7 +140,7 @@ Dashboard features:
 
 Three terminal examples stay in the main walkthrough: one full-confidence auto-execute case, one near-gate auto-execute case, and one low-confidence pending-review case. The remaining seven query outputs move to the appendix for optional manager follow-up.
 
-### Q1 — checkout-service OOM kill → AUTO-EXECUTE (0.95)
+### Q1 — checkout-service OOM kill -> AUTO-EXECUTE (0.95)
 
 **Speaker note:** Clean auto-execute case. Three strong matches (0.795–0.797), all above the 0.60 threshold. Model returns 0.95 and the gate fires. This is the system at its best — 8.7s from incident to Rundeck job.
 
@@ -125,7 +166,7 @@ $ python query_live.py "checkout service OOM kill, container hitting memory limi
   Total runtime: 8.7s
 ```
 
-### Q3 — product-search unresponsive → AUTO-EXECUTE (0.75)
+### Q3 — product-search unresponsive -> AUTO-EXECUTE (0.75)
 
 **Speaker note:** Mixed RAG sources — the top match is from the runbook (product-search.md), not an incident. The model correctly synthesises runbook context + incident history to identify reindex-elasticsearch as the right fix for an unresponsive ES-backed service. 9.9s.
 
@@ -143,7 +184,7 @@ $ python query_live.py "product search returning empty results, search index unr
 
   Recommended Job  : reindex-elasticsearch
   Confidence       : 0.75
-  Decision Gate    : ABOVE GATE → AUTO-EXECUTE
+  Decision Gate    : ABOVE GATE -> AUTO-EXECUTE
   Reasoning        : Unresponsive ES index directly maps to reindexing as remediation step.
                      Runbook + incident context both confirm the service architecture.
 
@@ -151,7 +192,7 @@ $ python query_live.py "product search returning empty results, search index unr
   Total runtime: 9.9s
 ```
 
-### Q6 — loyalty service not awarding points → PENDING REVIEW (0.35)
+### Q6 — loyalty service not awarding points -> PENDING REVIEW (0.35)
 
 **Speaker note:** This is the key "gate as feature" example. Decent RAG precedent (0.642), but the runbook context references a backfill script — not a service restart. The model recognised the mismatch and self-downgraded to 0.35. 14.6s total; engineer gets full context.
 
@@ -183,7 +224,7 @@ $ python query_live.py "loyalty service not awarding points after purchase, cust
 
 ---
 
-## SLIDE 7 — Why Pending Review is a Feature
+## SLIDE 8 — Why Pending Review is a Feature
 
 **Heading:** The Gate is the Point
 
@@ -229,53 +270,6 @@ Total runtime: 14.6s
 
 ---
 
-## SLIDE 8 — Tech Stack
-
-**Heading:** Stack
-
-Technologies:
-- Python 3.11
-- ChromaDB (vector store)
-- sentence-transformers / all-MiniLM-L6-v2 (embeddings)
-- Ollama + qwen3:14b Q4_K_M (local LLM, 9.3GB, RTX 4090)
-- Flask (dashboard)
-- Rich (CLI output)
-- ServiceNow API (mocked)
-- Rundeck (mocked job execution)
-
-**Callout:** "Runs entirely on local hardware · Zero external API calls · Zero ongoing cost"
-
----
-
-## SLIDE FUTURE — Where This Goes Next
-
-**Heading:** Where This Goes Next
-
-### Shadow Deployment Pipeline
-A parallel shadow environment mirrors all live traffic and incoming incidents without taking any action. When the pipeline's recommendations have earned sufficient confidence, a single approval promotes the shadow's configuration to production and tears down the shadow instance. Zero-downtime, zero-guesswork rollout — the system validates itself before it acts.
-
-### Repository-Aware Context
-Continuous indexing of service source repositories gives the LLM access to code-level context — configuration files, dependency changes, recent commits — when an incident's root cause demands investigation beyond historical tickets and runbooks. The knowledge base grows to match the depth of the problem.
-
-### Living Organisational Memory
-Automatic ingestion of JIRA tickets, Confluence pages, and equivalent knowledge bases keeps the RAG context current with the team's accumulated decisions, post-mortems, and architectural changes. The system learns continuously from every resolved incident and every documented decision — whether or not it was the one that triaged it.
-
----
-
-## SLIDE BACKLOG — Next on the List
-
-**Heading:** Next on the List
-
-Priority items in order:
-
-1. **Feedback Loop** — Engineer overrides on pending-review decisions feed back into the knowledge base as high-signal labelled examples, improving future recommendations automatically.
-2. **Multi-Incident Correlation** — When five services degrade simultaneously, route to a cascading-failure reasoning path rather than treating each incident in isolation. Reduces noise, surfaces the real root cause faster.
-3. **Confidence Calibration** — Run against a held-out labelled dataset, plot a reliability diagram, and verify that "0.75 confidence" actually corresponds to roughly 75% correct recommendations. Trust the number before you trust the gate.
-4. **Streaming Output** — Show LLM reasoning token by token in the dashboard so engineers can interrupt if the reasoning is going in the wrong direction before a decision is made.
-5. **Slack / PagerDuty Integration** — Pending-review recommendations surface in the engineer's existing workflow. No dashboard check required — the recommendation meets the engineer where they are.
-
----
-
 ## SLIDE OBS — Observability
 
 **Heading:** Observability
@@ -298,32 +292,36 @@ Alert on:
 
 ---
 
-## SLIDE PROD — From Demo to Production
+## SLIDE 9 — Tech Stack
 
-**Heading:** From Demo to Production
+**Heading:** Stack
 
-Migration path:
-- ServiceNow mock → real API with webhook triggers on incident creation
-- ChromaDB local → managed vector store with backup and replication
-- Ollama local → hosted LLM endpoint, or keep local where data privacy requires it
-- Single-threaded demo → job queue so concurrent incidents are triaged in parallel
-- Manual review outcomes → feedback loop that ingests engineer overrides back into the knowledge base
+Technologies:
+- Python 3.11
+- ChromaDB (vector store)
+- sentence-transformers / all-MiniLM-L6-v2 (embeddings)
+- Ollama + qwen3:14b Q4_K_M (local LLM, 9.3GB, RTX 4090)
+- Flask (dashboard)
+- Rich (CLI output)
+- ServiceNow API (mocked)
+- Rundeck (mocked job execution)
 
-Retrieval quality at scale:
-- More incidents improve recall because the chance of a near-duplicate existing in the corpus increases
-- At millions of incidents, high-dimensional vectors compress toward similar cosine distances, making "strong match" harder to distinguish from "weak match"
-- Mitigate with periodic reindexing on better embedding models, metadata filtering by service namespace, and hybrid BM25 + vector search
+**Callout:** "Runs entirely on local hardware · Zero external API calls · Zero ongoing cost"
 
 ---
 
-## SLIDE 9 — Closing
+## SLIDE FUTURE — Where This Goes Next
 
-**Heading:** What This Demonstrates
+**Heading:** Where This Goes Next
 
-- Production-pattern RAG pipeline with real similarity scoring
-- LLM structured output with confidence-gated automation
-- Human-in-the-loop safety by design, not by accident
-- Extensible to real ServiceNow + Rundeck with config changes only
+### Shadow Deployment Pipeline
+A shadow environment mirrors live incidents without acting. Once recommendations earn sufficient confidence, a single approval promotes to production - zero-downtime, the system validates itself before it acts.
+
+### Repository-Aware Context
+Continuous indexing of service repos gives the LLM code-level context - config files, dependency changes, recent commits - when a root cause needs investigation beyond tickets and runbooks.
+
+### Living Organisational Memory
+Automatic ingestion of JIRA, Confluence, and equivalent knowledge bases keeps RAG context current with the team's accumulated decisions and post-mortems. The system learns from every resolved incident.
 
 ---
 
@@ -333,7 +331,7 @@ Retrieval quality at scale:
 
 These seven outputs are kept at the end for optional follow-up if the manager wants to inspect more examples.
 
-### Q2 — payment-processor 500 errors → AUTO-EXECUTE (0.95)
+### Q2 — payment-processor 500 errors -> AUTO-EXECUTE (0.95)
 
 **Speaker note:** Interesting case — all three RAG matches are weak (0.488–0.495), below the 0.60 threshold. The model has no strong precedent. Yet it returns 0.95 confidence based on the runbook pattern-matching three prior resolved incidents. The AI is doing the heavy lifting here.
 
@@ -359,7 +357,7 @@ $ python query_live.py "payment processor returning 500 errors, transactions not
   Total runtime: 8.2s
 ```
 
-### Q4 — inventory sync stalled → PENDING REVIEW (0.66)
+### Q4 — inventory sync stalled -> PENDING REVIEW (0.66)
 
 **Speaker note:** Good RAG matches (0.639–0.675) and a clear recommendation, but confidence just missed the 0.70 gate. The model correctly identified the pipeline-stall pattern but wasn't certain enough to auto-fire. The engineer receives a pre-reasoned brief with the matching incidents attached.
 
@@ -385,7 +383,7 @@ $ python query_live.py "inventory sync stalled, stock levels on website not upda
   Total runtime: 15.4s
 ```
 
-### Q5 — store POS tills unresponsive → AUTO-EXECUTE (0.75)
+### Q5 — store POS tills unresponsive -> AUTO-EXECUTE (0.75)
 
 **Speaker note:** Weak RAG (0.547–0.573) but the model deduced a rollback from P1 context — store-pos-system Consul mesh misconfiguration causing 2,300-store outage, resolved by rollback. Confident enough to fire. The AI correctly reasoned beyond the low similarity score.
 
@@ -403,7 +401,7 @@ $ python query_live.py "store POS system tills unresponsive, cashiers cannot pro
 
   Recommended Job  : rollback-to-previous-version
   Confidence       : 0.75
-  Decision Gate    : ABOVE GATE → AUTO-EXECUTE
+  Decision Gate    : ABOVE GATE -> AUTO-EXECUTE
   Reasoning        : P1 incident with configuration rollback resolving 2,300-store outage.
                      Pattern matches despite low similarity — model correctly extrapolated.
 
@@ -411,7 +409,7 @@ $ python query_live.py "store POS system tills unresponsive, cashiers cannot pro
   Total runtime: 9.9s
 ```
 
-### Q7 — order fulfilment latency spike → AUTO-EXECUTE (0.75)
+### Q7 — order fulfilment latency spike -> AUTO-EXECUTE (0.75)
 
 **Speaker note:** Three partial RAG matches on order-fulfilment P99 latency (0.558–0.571). Model correctly maps latency caused by upstream pressure to scale-up-replicas — adding capacity to absorb load while the upstream is investigated. 12.2s.
 
@@ -429,7 +427,7 @@ $ python query_live.py "order fulfilment delays caused by upstream pricing engin
 
   Recommended Job  : scale-up-replicas
   Confidence       : 0.75
-  Decision Gate    : ABOVE GATE → AUTO-EXECUTE
+  Decision Gate    : ABOVE GATE -> AUTO-EXECUTE
   Reasoning        : Upstream latency causing downstream delays points to capacity pressure.
                      Scaling replicas reduces per-instance load while root cause is addressed.
 
@@ -437,7 +435,7 @@ $ python query_live.py "order fulfilment delays caused by upstream pricing engin
   Total runtime: 12.2s
 ```
 
-### Q8 — notification service duplicate emails → PENDING REVIEW (0.35)
+### Q8 — notification service duplicate emails -> PENDING REVIEW (0.35)
 
 **Speaker note:** Highest RAG similarity of any pending-review case (0.687) — but the matched incident is about duplicate push notifications, not email. The third match is an auto-generated runbook for a broken unsubscribe link. The model recognised the semantic mismatch and self-downgraded to 0.35. 22.5s.
 
@@ -468,7 +466,7 @@ $ python query_live.py "notification service sending duplicate confirmation emai
   Total runtime: 22.5s
 ```
 
-### Q9 — supplier EDI orders dropped → PENDING REVIEW (0.65)
+### Q9 — supplier EDI orders dropped -> PENDING REVIEW (0.65)
 
 **Speaker note:** Best RAG match is highly relevant (0.705, EDI batch failure / schema version mismatch). But force-inventory-sync is a data pipeline fix, not a schema validation fix. The model acknowledged the plausible but imperfect mapping and held at 0.65. 25.7s — longest runtime in the set.
 
@@ -498,7 +496,7 @@ $ python query_live.py "supplier integration service dropping EDI purchase order
   Total runtime: 25.7s
 ```
 
-### Q10 — recommendation engine degraded → PENDING REVIEW (0.45)
+### Q10 — recommendation engine degraded -> PENDING REVIEW (0.45)
 
 **Speaker note:** Hardest case. All three RAG matches are weak (0.315–0.393) and from unrelated services (product-search). No knowledge base entry for the recommendation engine at all. The model is at the edge of its context, and it knows it — 0.45, rule-based fallback. 13.8s.
 

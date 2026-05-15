@@ -128,13 +128,21 @@ decktape \
 kill %1
 ```
 
-### LaTeX Beamer (requires texlive)
+### LaTeX Beamer
+
+**Option A — Tectonic** (auto-fetches packages, no full TeX install):
+
+```bash
+cd presentation/pdf/beamer
+tectonic presentation.tex --outdir=..
+mv ../presentation.pdf ../presentation.beamer.pdf
+```
+
+**Option B — XeLaTeX** (requires texlive):
 
 ```bash
 # Install (once, requires sudo):
 sudo apt-get install -y texlive-xetex texlive-fonts-extra texlive-latex-extra
-# Optional for best fonts:
-# sudo apt-get install -y fonts-jetbrains-mono
 
 cd presentation/pdf/beamer
 xelatex -output-directory=../ presentation.tex
@@ -146,29 +154,28 @@ On **Windows** install MiKTeX (<https://miktex.org>) and use `xelatex` from the 
 
 ---
 
-## Slide Structure (24 slides: 16 main + 8 appendix)
+## Slide Structure (22 slides: 14 main + 8 appendix)
 
 | # | Title | Speaker timing |
 |---|-------|---------------|
 | 1 | ops-knowledge-loop (Title) | ~30s |
-| 2 | The On-Call Problem | ~30s |
-| 3 | How It Works (pipeline) | ~45s |
-| 4 | What the RAG Searches | ~30s |
-| 5 | Ops Dashboard | ~20s |
-| 6 | 10 Queries · Live Run (HERO) | ~60s |
-| 6b | Featured terminal output — Query 1 | ~20s |
-| 6c | Featured terminal output — Query 3 | ~20s |
-| 6d | Featured terminal output — Query 6 | ~20s |
-| 7 | The Gate is the Point | ~45s |
-| 8 | Stack | ~20s |
-| Future | Where This Goes Next | ~30s |
-| Backlog | Next on the List | optional |
-| Observability | Production observability | optional |
-| Production | From Demo to Production | optional |
-| 9 | What This Demonstrates (Closing) | ~30s |
-| Appendix | Additional terminal outputs Q2, Q4, Q5, Q7, Q8, Q9, Q10 | optional |
+| 2 | Prior Art | ~45s |
+| 3 | The On-Call Problem | ~30s |
+| 4 | How It Works (pipeline) | ~45s |
+| 5 | What the RAG Searches | ~30s |
+| 6 | Ops Dashboard | ~20s |
+| 7 | 10 Queries · Live Run (HERO) | ~60s |
+| 8 | Featured terminal output — Query 1 | ~20s |
+| 9 | Featured terminal output — Query 3 | ~20s |
+| 10 | Featured terminal output — Query 6 | ~20s |
+| 11 | The Gate is the Point | ~45s |
+| 12 | Observability | ~30s |
+| 13 | Stack | ~20s |
+| 14 | Where This Goes Next | ~30s |
+| A0 | Appendix — Additional Terminal Outputs (divider) | optional |
+| A1–A7 | Q2, Q4, Q5, Q7, Q8, Q9, Q10 terminal outputs | optional |
 
-Core walkthrough: ~5 minutes at a measured pace. Appendix slides are for follow-up questions.
+Core walkthrough: ~5 minutes. Appendix slides are at the very end for manager follow-up.
 
 ---
 
