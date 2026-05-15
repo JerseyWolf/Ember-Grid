@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ops-knowledge-loop — Ember Grid</title>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     EDIT THESE TWO PLACEHOLDERS BEFORE YOUR DEMO / INTERVIEW
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+  const DEMO_DAYS      = "[X days]";   // ← FILL IN
+  const DEMO_ROLE_NAME = "[Role Name]"; // ← FILL IN
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+
+<style>
+/* ═══ DESIGN TOKENS ═══════════════════════════════════════════════ */
+:root {
+  --bg:        #0A0F0A;
+  --bg2:       #0F1A0F;
+  --bg3:       #162016;
+  --green:     #00FF41;
+  --green-dim: #00CC33;
+  --green-glow:#00FF4140;
+  --teal:      #19E6C5;
+  --amber:     #FFC857;
+  --amber-dim: #CC9F40;
+  --red:       #FF4141;
+  --text:      #C8E6C9;
+  --text-dim:  #6B8F6B;
+  --border:    #1E3A1E;
+  --mono:      'JetBrains Mono', Consolas, 'Cascadia Mono', monospace;
+  --sans:      'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* ═══ BASE / REVEAL OVERRIDES ════════════════════════════════════ */
+.reveal-viewport { background: var(--bg); }
+.reveal { font-family: var(--sans); color: var(--text); }
+.reveal .slides { text-align: left; }
+.reveal h1, .reveal h2, .reveal h3 {
+  font-family: var(--mono);
+  color: var(--green);
+  text-transform: none;
+  letter-spacing: -0.01em;
+  text-shadow: 0 0 20px var(--green-glow);
+  margin-bottom: 0.6em;
+}
+.reveal h1 { font-size: 2.6em; }
+.reveal h2 { font-size: 1.6em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; margin-bottom: 0.5em; }
+.reveal h3 { font-size: 1.1em; color: var(--teal); }
+.reveal p, .reveal li { font-size: 0.82em; line-height: 1.65; color: var(--text); }
+.reveal ul { list-style: none; padding: 0; margin: 0; }
+.reveal ul li::before { content: "▸ "; color: var(--green); font-family: var(--mono); }
+.reveal a { color: var(--teal); }
+.reveal .slides section { padding: 1.8em 2.6em 2.4em; box-sizing: border-box; }
+
+/* scanline overlay */
+.reveal-viewport::after {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
+}
+
+/* ═══ STATUS BAR ════════════════════════════════════════════════ */
+#status-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  padding: 4px 24px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  display: flex; justify-content: space-between; align-items: center;
+}
+#status-bar .prompt { color: var(--green); }
+#status-bar .caret {
+  display: inline-block; width: 8px; height: 12px;
+  background: var(--green); margin-left: 2px; vertical-align: middle;
+  animation: blink 1s step-end infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* ═══ CARDS / PANELS ════════════════════════════════════════════ */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1em 1.2em;
+  margin: 0.4em 0;
+}
+.card-accent { border-left: 3px solid var(--green); }
+.card-amber  { border-left: 3px solid var(--amber); }
+.card-teal   { border-left: 3px solid var(--teal); }
+
+.terminal-panel {
+  background: #050D05;
+  border: 1px solid var(--green-dim);
+  border-radius: 6px;
+  padding: 0.8em 1em;
+  font-family: var(--mono);
+  font-size: 0.58em;
+  line-height: 1.55;
+  color: #90EE90;
+  white-space: pre;
+  overflow: hidden;
+  box-shadow: 0 0 12px var(--green-glow);
+}
+.terminal-panel .t-cmd   { color: var(--green); font-weight: 700; }
+.terminal-panel .t-ok    { color: var(--green); }
+.terminal-panel .t-warn  { color: var(--amber); }
+.terminal-panel .t-auto  { color: var(--green); font-weight: 700; }
+.terminal-panel .t-pend  { color: var(--amber); font-weight: 700; }
+.terminal-panel .t-dim   { color: var(--text-dim); }
+
+/* ═══ PIPELINE (SLIDE 3) ════════════════════════════════════════ */
+.pipeline {
+  display: flex; align-items: center; gap: 0;
+  margin: 1.2em 0; overflow: hidden;
+}
+.pipe-stage {
+  flex: 1; text-align: center;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.7em 0.4em;
+  font-family: var(--mono);
+  font-size: 0.58em;
+  transition: box-shadow 0.4s, border-color 0.4s;
+  position: relative;
+}
+.pipe-stage.active {
+  border-color: var(--green);
+  box-shadow: 0 0 16px var(--green-glow);
+}
+.pipe-stage .stage-num {
+  color: var(--green); font-weight: 700;
+  display: block; font-size: 1.2em; margin-bottom: 0.3em;
+}
+.pipe-stage .stage-label {
+  color: var(--green); font-weight: 700; font-size: 1.1em;
+  display: block; margin-bottom: 0.4em;
+}
+.pipe-stage .stage-desc { color: var(--text-dim); line-height: 1.4; font-size: 0.95em; }
+.pipe-arrow {
+  font-family: var(--mono);
+  color: var(--green);
+  font-size: 1.2em;
+  padding: 0 4px;
+  flex-shrink: 0;
+  animation: arrowpulse 2s ease-in-out infinite;
+}
+@keyframes arrowpulse { 0%,100%{opacity:0.3} 50%{opacity:1} }
+
+/* ═══ KNOWLEDGE BASE COLUMNS (SLIDE 4) ══════════════════════════ */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4em; }
+.kb-col-label {
+  font-family: var(--mono); font-size: 0.72em; font-weight: 700;
+  color: var(--teal); margin-bottom: 0.5em;
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+
+/* ═══ HERO TABLE (SLIDE 6) ══════════════════════════════════════ */
+.results-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1.8fr 0.7fr 1fr;
+  gap: 3px;
+  font-family: var(--mono);
+  font-size: 0.6em;
+  margin: 0.6em 0;
+}
+.rg-header {
+  padding: 5px 8px;
+  background: var(--bg3);
+  color: var(--green);
+  font-weight: 700;
+  border-radius: 3px;
+  font-size: 0.9em;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.rg-cell {
+  padding: 5px 8px;
+  background: var(--bg2);
+  color: var(--text);
+  border-radius: 3px;
+  display: flex; align-items: center; gap: 6px;
+}
+.rg-cell.auto  { border-left: 2px solid var(--green); }
+.rg-cell.pend  { border-left: 2px solid var(--amber); }
+.rg-row-auto .rg-cell { background: #0F1F0F; }
+.rg-row-pend .rg-cell { background: #1A1500; }
+.conf-bar-wrap {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+}
+.conf-bar-bg {
+  flex: 1; height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden;
+}
+.conf-bar-fill {
+  height: 100%; border-radius: 3px;
+  transform: scaleX(0); transform-origin: left;
+  animation: barfill 1.2s ease forwards;
+}
+.conf-bar-fill.auto { background: var(--green); }
+.conf-bar-fill.pend { background: var(--amber); }
+@keyframes barfill { to { transform: scaleX(1); } }
+.outcome-chip {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 0.85em;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.outcome-chip.auto { background: #00FF4120; color: var(--green); border: 1px solid var(--green-dim); }
+.outcome-chip.pend { background: #FFC85720; color: var(--amber); border: 1px solid var(--amber-dim); }
+
+.results-summary {
+  display: flex; gap: 1.4em; margin: 0.6em 0;
+  font-family: var(--mono); font-size: 0.7em;
+}
+.summary-chip {
+  padding: 6px 14px; border-radius: 4px; font-weight: 700;
+}
+.summary-chip.auto { background: #00FF4118; border: 1px solid var(--green); color: var(--green); }
+.summary-chip.pend { background: #FFC85718; border: 1px solid var(--amber); color: var(--amber); }
+.summary-chip .big { font-size: 1.6em; display: block; line-height: 1; }
+
+/* counter */
+.auto-counter { font-family: var(--mono); font-size: 0.7em; color: var(--text-dim); margin: 0.4em 0; }
+.auto-counter span { color: var(--green); font-weight: 700; font-size: 1.4em; }
+.auto-counter span.pend-n { color: var(--amber); }
+
+/* ═══ TECH STACK GRID (SLIDE 8) ════════════════════════════════ */
+.stack-grid {
+  display: flex; flex-wrap: wrap; gap: 0.7em;
+  margin: 0.8em 0;
+}
+.stack-chip {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 7px 14px;
+  font-family: var(--mono);
+  font-size: 0.66em;
+  color: var(--text);
+  transition: border-color 0.2s, color 0.2s;
+}
+.stack-chip:hover { border-color: var(--green); color: var(--green); }
+.stack-chip .tech-name { color: var(--teal); font-weight: 700; display: block; }
+
+.callout-box {
+  border: 1px solid var(--green);
+  border-radius: 6px;
+  padding: 0.7em 1.2em;
+  background: #00FF4108;
+  font-family: var(--mono);
+  font-size: 0.7em;
+  color: var(--green);
+  margin-top: 1em;
+  box-shadow: 0 0 10px var(--green-glow);
+}
+
+/* ═══ CLOSING / TITLE SPECIAL STYLES ════════════════════════════ */
+.placeholder-token {
+  background: #FFC85740;
+  color: var(--amber);
+  border: 1px solid var(--amber);
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-family: var(--mono);
+  font-size: 0.9em;
+  font-weight: 700;
+}
+
+.title-mono {
+  font-family: var(--mono);
+  font-size: 3em;
+  font-weight: 700;
+  color: var(--green);
+  text-shadow: 0 0 30px var(--green), 0 0 60px var(--green-glow);
+  letter-spacing: -0.03em;
+  display: block;
+  overflow: hidden;
+}
+.title-subtitle {
+  font-family: var(--sans);
+  font-size: 1em;
+  color: var(--teal);
+  margin-top: 0.4em;
+  opacity: 0;
+  animation: fadein 0.8s 1.8s forwards;
+}
+.title-tagline {
+  font-family: var(--mono);
+  font-size: 0.75em;
+  color: var(--text-dim);
+  margin-top: 0.6em;
+  opacity: 0;
+  animation: fadein 0.8s 2.4s forwards;
+}
+.title-ascii {
+  font-family: var(--mono);
+  font-size: 0.55em;
+  color: var(--green-dim);
+  margin-top: 1.2em;
+  opacity: 0;
+  animation: fadein 0.6s 3s forwards;
+  white-space: pre;
+}
+@keyframes fadein { to { opacity: 1; } }
+
+/* typed effect */
+.typed { overflow: hidden; border-right: 3px solid var(--green); white-space: nowrap; animation: typed-anim 1.4s steps(20,end) 0.3s both, blink-border 0.7s step-end 1.7s 3; }
+@keyframes typed-anim { from { width: 0 } to { width: 100% } }
+@keyframes blink-border { 0%,100%{border-color:var(--green)} 50%{border-color:transparent} }
+
+/* ═══ FRAGMENT OVERRIDES ════════════════════════════════════════ */
+.reveal .fragment { transition: all 0.5s ease; }
+.reveal .fragment.visible { opacity: 1; }
+
+/* ═══ SECTION LABEL ═════════════════════════════════════════════ */
+.slide-label {
+  font-family: var(--mono); font-size: 0.58em; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 0.1em;
+  margin-bottom: 0.3em; display: block;
+}
+
+/* ═══ GATE EXAMPLE CARDS (SLIDE 7) ════════════════════════════= */
+.gate-cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.8em; margin: 0.6em 0; }
+.gate-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-top: 2px solid var(--amber);
+  border-radius: 6px; padding: 0.8em;
+}
+.gate-card .service-label {
+  font-family: var(--mono); font-size: 0.65em; color: var(--amber);
+  font-weight: 700; margin-bottom: 0.4em;
+}
+.gate-card p { font-size: 0.72em; color: var(--text); margin: 0; line-height: 1.5; }
+
+/* ═══ DASHBOARD FEATURE LIST (SLIDE 5) ═══════════════════════ */
+.dash-features { list-style: none; padding: 0; }
+.dash-features li {
+  padding: 0.5em 0.8em;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.78em;
+  display: flex; align-items: center; gap: 0.7em;
+}
+.dash-features li:last-child { border-bottom: none; }
+.dash-features li::before { content: none; }
+.feat-icon { color: var(--teal); font-family: var(--mono); font-size: 1.1em; }
+.flask-badge {
+  display: inline-block;
+  background: var(--bg3); border: 1px solid var(--teal);
+  border-radius: 4px; padding: 3px 10px;
+  font-family: var(--mono); font-size: 0.65em; color: var(--teal);
+  margin-top: 0.8em;
+}
+
+/* ═══ CLOSING BULLETS ════════════════════════════════════════════ */
+.closing-bullets { list-style: none; padding: 0; margin: 0.6em 0; }
+.closing-bullets li {
+  display: flex; align-items: flex-start; gap: 0.8em;
+  padding: 0.5em 0; border-bottom: 1px solid var(--border);
+  font-size: 0.8em;
+}
+.closing-bullets li::before { content: none; }
+.closing-bullets li:last-child { border-bottom: none; }
+.bullet-num {
+  font-family: var(--mono); color: var(--green); font-weight: 700;
+  font-size: 1.1em; flex-shrink: 0; min-width: 2em;
+}
+
+/* ═══ PRINT-PDF OVERRIDES ════════════════════════════════════════ */
+@media print {
+  body, .reveal-viewport { background: var(--bg) !important; }
+  .reveal .slides section { -webkit-print-color-adjust: exact; color-adjust: exact; }
+  #status-bar { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div id="status-bar">
+  <span class="prompt">ember@ops:~$</span>
+  <span id="status-slide">slide 1/9</span>
+  <span><span class="caret"></span></span>
+</div>
+
+<div class="reveal">
+<div class="slides">
+
+<!-- ════════════════════════════════════════════════════════════
+     SLIDE 1 — TITLE
+     ════════════════════════════════════════════════════════════ -->
+<section data-slide="1">
+  <span class="slide-label">ops-knowledge-loop</span>
+  <span class="title-mono typed">ops-knowledge-loop</span>
+  <div class="title-subtitle">AI-Powered Incident Triage &nbsp;·&nbsp; Ember Grid</div>
+  <div class="title-tagline">▸ From alert to remediation in under 10 seconds</div>
+  <pre class="title-ascii">┌──────────────────────────────────────────────────────────┐
+│  INCIDENT → RAG → LLM → GATE → RUNDECK → TICKET CLOSED  │
+└──────────────────────────────────────────────────────────┘</pre>
+  <aside class="notes">
+    ~30s. Set the scene: this is a fully local, private, AI-powered ops triage pipeline built for Ember Grid. No cloud API calls, no cost. Let's walk through it.
+  </aside>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     SLIDE 2 — THE PROBLEM
+     ════════════════════════════════════════════════════════════ -->
+<section data-slide="2">
+  <span class="slide-label">Context</span>
+  <h2>The On-Call Problem</h2>
+  <div class="fragment" style="margin-bottom:0.5em">
+    <div class="card card-accent">
+      <strong style="color:var(--green);font-family:var(--mono);font-size:0.75em">MEAN TIME TO REMEDIATION</strong>
+      <p style="margin-top:0.3em">Mean time to remediation is dominated by <em>lookup time</em>, not fix time</p>
+    </div>
+  </div>
+  <div class="fragment" style="margin-bottom:0.5em">
+    <div class="card card-teal">
+      <strong style="color:var(--teal);font-family:var(--mono);font-size:0.75em">KNOWLEDGE SILO</strong>
+      <p style="margin-top:0.3em">Institutional knowledge lives in engineers' heads, not in systems</p>
+    </div>
+  </div>
+  <div class="fragment">
+    <div class="card card-amber">
+      <strong style="color:var(--amber);font-family:var(--mono);font-size:0.75em">REPEAT WORK</strong>
+      <p style="margin-top:0.3em">Repeated incidents get manually triaged every single time</p>
+    </div>
+  </div>
+  <p class="fragment" style="margin-top:1em;font-family:var(--mono);font-size:0.62em;color:var(--text-dim)">
+    ▸ Ember Grid runs 17 microservices across UK retail infrastructure
+  </p>
+  <aside class="notes">
+    ~30s. Three pain points every ops team recognises. The fix isn't faster engineers — it's institutional memory made queryable. That's what this pipeline does.
+  </aside>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     SLIDE 3 — SYSTEM ARCHITECTURE
+     ════════════════════════════════════════════════════════════ -->
+<section data-slide="3">
+  <span class="slide-label">Architecture</span>
+  <h2>How It Works</h2>
+  <div class="pipeline" id="pipeline">
+    <div class="pipe-stage" id="ps1">
+      <span class="stage-num">[01]</span>
+      <span class="stage-label">INCIDENT</span>
+      <span class="stage-desc">ServiceNow ticket free-text description</span>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-stage" id="ps2">
+      <span class="stage-num">[02]</span>
+      <span class="stage-label">RAG SEARCH</span>
+      <span class="stage-desc">sentence-transformers + ChromaDB top-3 matches</span>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-stage" id="ps3">
+      <span class="stage-num">[03]</span>
+      <span class="stage-label">LLM REASONING</span>
+      <span class="stage-desc">Ollama qwen3:14b → structured JSON response</span>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-stage" id="ps4">
+      <span class="stage-num">[04]</span>
+      <span class="stage-label">DECISION GATE</span>
+      <span class="stage-desc">≥0.70 auto-fire · &lt;0.70 human review</span>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-stage" id="ps5">
+      <span class="stage-num">[05]</span>
+      <span class="stage-label">OUTCOME</span>
+      <span class="stage-desc">Rundeck job fires or engineer gets pre-reasoned brief</span>
+    </div>
+  </div>
+  <div class="callout-box fragment">
+    ▸ Fully local &nbsp;·&nbsp; No data leaves the machine &nbsp;·&nbsp; No API costs &nbsp;·&nbsp; ~10s end-to-end
+  </div>
+  <aside class="notes">
+    ~45s. Walk through each stage left to right. Emphasise: the LLM never sees raw data — it only gets the RAG context already pulled from the knowledge base. Everything runs on hardware you own.
+  </aside>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     SLIDE 4 — KNOWLEDGE BASE
+     ════════════════════════════════════════════════════════════ -->
+<section data-slide="4">
+  <span class="slide-label">Data</span>
+  <h2>What the RAG Searches</h2>
+  <div class="two-col">
+    <div>
+      <div class="kb-col-label">▸ Incident History</div>
+      <div class="card card-accent fragment">
+        <p>500+ synthetic incidents across 17 services</p>
+      </div>
+      <div class="card card-accent fragment" style="margin-top:0.4em">
+        <p>Each indexed as a vector embedding in ChromaDB</p>
+      </div>
+      <div class="card card-accent fragment" style="margin-top:0.4em">
+        <p style="font-family:var(--mono);font-size:0.9em;color:var(--text-dim)">OOM kills · latency spikes · ETL failures<br>EDI schema mismatches · POS outages<br>loyalty bugs · notification duplicates</p>
+      </div>
+    </div>
+    <div>
+      <div class="kb-col-label">▸ Runbooks</div>
+      <div class="card card-teal fragment">
+        <p>Per-service markdown runbooks<br><span style="font-family:var(--mono);font-size:0.85em;color:var(--text-dim)">checkout · product-search · payment-processor · …</span></p>
+      </div>
+      <div class="card card-teal fragment" style="margin-top:0.4em">
+        <p>Auto-generated runbooks from resolved ServiceNow tickets</p>
+      </div>
+      <div class="card card-teal fragment" style="margin-top:0.4em">
+        <p>Chunked and embedded alongside incident history</p>
+      </div>
+    </div>
+  </div>
+  <p class="fragment" style="font-family:var(--mono);font-size:0.6em;color:var(--text-dim);margin-top:0.8em;border-top:1px solid var(--border);padding-top:0.5em">
+    All embeddings generated with <strong style="color:var(--teal)">all-MiniLM-L6-v2</strong> &nbsp;·&nbsp; Similarity threshold: <strong style="color:var(--green)">0.60</strong> strong match
+  </p>
+  <aside class="notes">
+    ~30s. Two inputs to the RAG: incident history and runbooks. Both are embedded the same way. The system sees them both as equal-weight context chunks — a runbook match is treated the same as an incident match.
+  </aside>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     SLIDE 5 — DASHBOARD
+     ════════════════════════════════════════════════════════════ -->
+<section data-slide="5">
+  <span class="slide-label">Tooling</span>
+  <h2>Ops Dashboard</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.4em">
+    <div>
+      <ul class="dash-features">
+        <li class="fragment"><span class="feat-icon">📋</span> Recent incidents and their triage status</li>
+        <li class="fragment"><span class="feat-icon">🎯</span> RAG match scores per incident</li>
+        <li class="fragment"><span class="feat-icon">🤖</span> AI recommendation with confidence score</li>
+        <li class="fragment"><span class="feat-icon">⚡</span> Decision gate outcome (auto-executed vs pending review)</li>
+        <li class="fragment"><span class="feat-icon">🔧</span> Rundeck job catalogue</li>
+      </ul>
+      <div class="fragment flask-badge">Flask · localhost:5000</div>
+    </div>
+    <div class="fragment">
+      <div class="card" style="border:1px solid var(--teal);background:#050D0D">
+        <div style="font-family:var(--mono);font-size:0.62em;color:var(--teal);margin-bottom:0.5em;font-weight:700">DASHBOARD PREVIEW</div>
+        <div style="font-family:var(--mono);font-size:0.58em;color:var(--text-dim);line-height:1.8">
+          ┌──────────────────────────────┐<br>
+          │ ops-knowledge-loop dashboard │<br>
+          ├──────┬──────────────┬────────┤<br>
+          │ INC  │ STATUS       │ CONF   │<br>
+          ├──────┼──────────────┼────────┤<br>
+          │ 0043 │ AUTO-EXECUTE │ 0.95 ✓ │<br>
+          │ 0044 │ PENDING      │ 0.35 ⏸ │<br>
+          │ 0045 │ AUTO-EXECUTE │ 0.75 ✓ │<br>
+          └──────┴──────────────┴────────┘
+        </div>
+      </div>
+    </div>
+  </div>
+  <aside class="notes">
+    ~20s. A live Flask web UI at localhost:5000. Shows the full triage history — you can see exactly why each decision was made, what the RAG matched, and what the model said.
+  </aside>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     SLIDE 6 — LIVE DEMO RESULTS (HERO)
+     ════════════════════════════════════════════════════════════ -->
+<section data-slide="6">
+  <span class="slide-label">Results</span>
+  <h2>10 Queries · Live Run</h2>
+
+  <div class="results-summary">
+    <div class="summary-chip auto"><span class="big" id="auto-count">0</span>AUTO-EXECUTED</div>
+    <div class="summary-chip pend"><span class="big" id="pend-count">0</span>PENDING REVIEW</div>
+    <div style="margin-left:auto;font-family:var(--mono);font-size:0.62em;color:var(--text-dim);display:flex;align-items:center">gate threshold: 0.70</div>
+  </div>
+
+  <div class="results-grid">
+    <!-- headers -->
+    <div class="rg-header">Incident</div>
+    <div class="rg-header">Recommended Job</div>
+    <div class="rg-header">Confidence</div>
+    <div class="rg-header">Outcome</div>
+
+    <!-- row 1 AUTO -->
+    <div class="rg-cell auto rg-row-auto">checkout-service OOM kill</div>
+    <div class="rg-cell rg-row-auto" style="font-size:0.9em;color:var(--teal)">restart-service-with-memory-bump</div>
+    <div class="rg-cell rg-row-auto"><div class="conf-bar-wrap"><div class="conf-bar-bg"><div class="conf-bar-fill auto" style="--w:0.95;animation-delay:0.1s;width:calc(var(--w)*100%)"></div></div>0.95</div></div>
+    <div class="rg-cell rg-row-auto"><span class="outcome-chip auto">AUTO-EXECUTE</span></div>
+
+    <!-- row 2 AUTO -->
+    <div class="rg-cell auto rg-row-auto">payment-processor 500 errors</div>
+    <div class="rg-cell rg-row-auto" style="font-size:0.9em;color:var(--teal)">rollback-to-previous-version</div>
+    <div class="rg-cell rg-row-auto"><div class="conf-bar-wrap"><div class="conf-bar-bg"><div class="conf-bar-fill auto" style="--w:0.95;animation-delay:0.2s;width:calc(var(--w)*100%)"></div></div>0.95</div></div>
+    <div class="rg-cell rg-row-auto"><span class="outcome-chip auto">AUTO-EXECUTE</span></div>
+
+    <!-- row 3 AUTO -->
+    <div class="rg-cell auto rg-row-auto">product-search unresponsive</div>
+    <div class="rg-cell rg-row-auto" style="font-size:0.9em;color:var(--teal)">reindex-elasticsearch</div>
+    <div class="rg-cell rg-row-auto"><div class="conf-bar-wrap"><div class="conf-bar-bg"><div class="conf-bar-fill auto" style="--w:0.75;animation-delay:0.3s;width:calc(var(--w)*100%)"></div></div>0.75</div></div>
+    <div class="rg-cell rg-row-auto"><span class="outcome-chip auto">AUTO-EXECUTE</span></div>
+
+    <!-- row 4 PEND -->
+    <div class="rg-cell pend rg-row-pend">inventory sync stalled</div>
+    <div class="rg-cell rg-row-pend" style="font-size:0.9em;color:var(--text-dim)">force-inventory-sync</div>
+    <div class="rg-cell rg-row-pend"><div class="conf-bar-wrap"><div class="conf-bar-bg"><div class="conf-bar-fill pend" style="--w:0.66;animation-delay:0.4s;width:calc(var(--w)*100%)"></div></div>0.66</div></div>
+    <div class="rg-cell rg-row-pend"><span class="outcome-chip pend">PENDING REVIEW</span></div>
+
+    <!-- row 5 AUTO -->
+    <div class="rg-cell auto rg-row-auto">store POS tills unresponsive</div>
+    <div class="rg-cell rg-row-auto" style="font-size:0.9em;color:var(--teal)">rollback-to-previous-version</div>
+    <div class="rg-cell rg-row-auto"><div class="conf-bar-wrap"><div class="conf-bar-bg"><div class="conf-bar-fill auto" style="--w:0.75;animation-delay:0.5s;width:calc(var(--w)*100%)"></div></div>0.75</div></div>
+    <div class="rg-cell rg-row-auto"><span class="outcome-chip auto">AUTO-EXECUTE</span></div>
+
+    <!-- row 6 PEND -->
+    <div class="rg-cell pend rg-row-pend">loyalty service not awarding pts</div>
+    <div class="rg-cell rg-row-pend" style="font-size:0.9em;color:var(--text-dim)">restart-service-rolling</div>
+    <div class="rg-cell rg-row-pend"><div class="conf-bar-wrap"><div class="conf-bar-bg"><div class="conf-bar-fill pend" style="--w:0.35;animation-delay:0.6s;width:calc(var(--w)*100%)"></div></div>0.35</div></div>
+    <div class="rg-cell rg-row-pend"><span class="outcome-chip pend">PENDING REVIEW</span></div>
+
+    <!-- row 7 AUTO -->
+    <div class="rg-cell auto rg-row-auto">order fulfilment latency spike</div>
+    <div class="rg-cell rg-row-auto" style="font-size:0.9em;color:var(--teal)">scale-up-replicas</div>
+    <div class="rg-cell rg-row-auto"><div class="conf-bar-wrap"><div class="conf-bar-bg"><div class="conf-bar-fill auto" style="--w:0.75;animation-delay:0.7s;width:calc(var(--w)*100%)"></div></div>0.75</div></div>
+    <div class="rg-cell rg-row-auto"><span class="outcome-chip auto">AUTO-EXECUTE</span></div>
+
+    <!-- row 8 PEND -->
+    <div class="rg-cell pend rg-row-pend">notification service dup emails</div>
+    <div class="rg-cell rg-row-pend" style="font-size:0.9em;color:var(--text-dim)">restart-service-with-memory-bump</div>
+    <div class="rg-cell rg-row-pend"><div class="conf-bar-wrap"><div class="conf-bar-bg"><div class="conf-bar-fill pend" style="--w:0.35;animation-delay:0.8s;width:calc(var(--w)*100%)"></div></div>0.35</div></div>
+    <div class="rg-cell rg-row-pend"><span class="outcome-chip pend">PENDING REVIEW</span></div>
+
+    <!-- row 9 PEND -->
+    <div class="rg-cell pend rg-row-pend">supplier EDI orders dropped</div>
+    <div class="rg-cell rg-row-pend" style="font-size:0.9em;color:var(--text-dim)">force-inventory-sync</div>
+    <div class="rg-cell rg-row-pend"><div class="conf-bar-wrap"><div class="conf-bar-bg"><div class="conf-bar-fill pend" style="--w:0.65;animation-delay:0.9s;width:calc(var(--w)*100%)"></div></div>0.65</div></div>
+    <div class="rg-cell rg-row-pend"><span class="outcome-chip pend">PENDING REVIEW</span></div>
+
+    <!-- row 10 PEND -->
+    <div class="rg-cell pend rg-row-pend">recommendation engine degraded</div>
+    <div class="rg-cell rg-row-pend" style="font-size:0.9em;color:var(--text-dim)">reindex-elasticsearch</div>
+    <div class="rg-cell rg-row-pend"><div class="conf-bar-wrap"><div class="conf-bar-bg"><div class="conf-bar-fill pend" style="--w:0.45;animation-delay:1.0s;width:calc(var(--w)*100%)"></div></div>0.45</div></div>
+    <div class="rg-cell rg-row-pend"><span class="outcome-chip pend">PENDING REVIEW</span></div>
+  </div>
+
+  <p style="font-family:var(--mono);font-size:0.58em;color:var(--text-dim);margin-top:0.5em;border-top:1px solid var(--border);padding-top:0.4em">
+    "The gate is discriminating by design — weak RAG similarity or ambiguous root cause correctly suppresses auto-execution"
+  </p>
+  <aside class="notes">
+    ~60s. This is the hero slide. 10 real queries run against a live local model. 5 auto-executed, 5 routed to human review. The confidence bars tell the story — high confidence + strong RAG precedent = fire. Low confidence = pause for human. Walk through a high and a low example.
+  </aside>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     FEATURED TERMINAL SLIDES Q1, Q3, Q6
+     ════════════════════════════════════════════════════════════ -->
+
+<section data-slide="q1">
+  <span class="slide-label">Live Output — Query 1 / 10</span>
+  <h3 style="color:var(--green)">checkout-service OOM kill &nbsp;·&nbsp; <span style="color:var(--teal)">0.95 → AUTO-EXECUTE</span></h3>
+  <div class="terminal-panel">
+<span class="t-cmd">$ python query_live.py "checkout service OOM kill, container hitting memory limit and restarting repeatedly under load"</span>
+
+<span class="t-dim">╭────────────────────────────────────────────╮
+│ ops-knowledge-loop  |  Live Incident Query │  MOCK_MODE=TRUE  |  env: mock
+╰────────────────────────────────────────────╯</span>
+
+<span class="t-dim">Step 1 — Searching knowledge base...
+╭───┬────────────────┬──────────────────────────┬──────────────────────────────────────────────────╮
+│ # │ Source         │        Similarity        │ Excerpt                                          │
+├───┼────────────────┼──────────────────────────┼──────────────────────────────────────────────────┤</span>
+<span class="t-ok">│ 1 │ incidents.json │   0.797 ✓ strong match   │ [INC0043096] checkout-service OOM kill           │
+│ 2 │ incidents.json │   0.796 ✓ strong match   │ [INC0043144] checkout-service OOM kill           │
+│ 3 │ incidents.json │   0.795 ✓ strong match   │ [INC0043048] checkout-service OOM kill           │</span>
+<span class="t-dim">╰───┴────────────────┴──────────────────────────┴──────────────────────────────────────────────────╯</span>
+
+<span class="t-ok">✓ Strong precedent found — incidents.json (similarity 0.797)</span>
+
+<span class="t-dim">Step 2 — Requesting AI remediation recommendation...
+  Recommended Job  : </span><span class="t-ok">restart-service-with-memory-bump</span>
+<span class="t-dim">  Confidence       : </span><span class="t-ok">0.95</span>
+<span class="t-dim">  Decision Gate    : </span><span class="t-auto">AUTO-EXECUTE</span>
+<span class="t-dim">  AI Source        : ollama:qwen3:14b
+  Reasoning        : OOM kills due to memory limits directly align with the job purpose.
+                     Runbook context explicitly confirms memory threshold breach as trigger.</span>
+
+<span class="t-dim">╭──────────────────────────────────────────────────────────────────────────────────────╮</span>
+<span class="t-auto">│ ✓ WOULD AUTO-EXECUTE  —  restart-service-with-memory-bump  (conf 0.95 ≥ 0.70 gate)  │</span>
+<span class="t-dim">╰──────────────────────────────────────────────────────────────────────────────────────╯
+Total runtime: 8.7s</span></div>
+  <aside class="notes">~20s. Clean auto-execute case. Three strong matches (0.795–0.797), all above the 0.60 threshold. Model returns 0.95 and the gate fires immediately. 8.7s from incident to Rundeck job — the system at its best.</aside>
+</section>
+
+
+<section data-slide="q3">
+  <span class="slide-label">Live Output — Query 3 / 10</span>
+  <h3 style="color:var(--green)">product-search unresponsive after deploy &nbsp;·&nbsp; <span style="color:var(--teal)">0.75 → AUTO-EXECUTE</span></h3>
+  <div class="terminal-panel">
+<span class="t-cmd">$ python query_live.py "product search returning empty results, search index unresponsive after deployment"</span>
+
+<span class="t-dim">╭────────────────────────────────────────────╮
+│ ops-knowledge-loop  |  Live Incident Query │  MOCK_MODE=TRUE  |  env: mock
+╰────────────────────────────────────────────╯</span>
+
+<span class="t-dim">Step 1 — Searching knowledge base...
+╭───┬──────────────────┬──────────────────────────┬──────────────────────────────────────────────╮
+│ # │ Source           │        Similarity        │ Excerpt                                      │
+├───┼──────────────────┼──────────────────────────┼──────────────────────────────────────────────┤</span>
+<span class="t-ok">│ 1 │ product-search.md│  0.575 ~ partial match   │ Service Overview: ES-backed search service   │
+│ 2 │ incidents.json   │  0.571 ~ partial match   │ [INC0043346] product-search slow query 1352ms│
+│ 3 │ product-search.md│  0.570 ~ partial match   │ Diagnostic Steps: kubectl exec cache rate    │</span>
+<span class="t-dim">╰───┴──────────────────┴──────────────────────────┴──────────────────────────────────────────────╯</span>
+
+<span class="t-warn">⚠ No close precedent — best match 0.575 in product-search.md. AI will deduce a remediation.</span>
+
+<span class="t-dim">Step 2 — Requesting AI remediation recommendation...
+  Recommended Job  : </span><span class="t-ok">reindex-elasticsearch</span>
+<span class="t-dim">  Confidence       : </span><span class="t-ok">0.75</span>
+<span class="t-dim">  Decision Gate    : </span><span class="t-auto">ABOVE GATE → AUTO-EXECUTE</span>
+<span class="t-dim">  AI Source        : ollama:qwen3:14b
+  Reasoning        : Unresponsive ES index after deployment maps to reindexing as direct fix.
+                     Runbook + incident context both confirm the Elasticsearch-backed architecture.</span>
+
+<span class="t-dim">╭──────────────────────────────────────────────────────────────────────────────────────╮</span>
+<span class="t-auto">│ ✓ WOULD AUTO-EXECUTE  —  reindex-elasticsearch  (confidence 0.75 ≥ 0.70 gate)       │</span>
+<span class="t-dim">╰──────────────────────────────────────────────────────────────────────────────────────╯
+Total runtime: 9.9s</span></div>
+  <aside class="notes">~20s. Mixed RAG sources — both runbook chunks and an incident match. Model correctly synthesises them to reach the right answer. The runbook describes the ES architecture; the incident confirms the symptom pattern. 9.9s.</aside>
+</section>
+
+
+
+<section data-slide="q6">
+  <span class="slide-label">Live Output — Query 6 / 10</span>
+  <h3 style="color:var(--green)">loyalty service not awarding points &nbsp;·&nbsp; <span style="color:var(--amber)">0.35 → PENDING REVIEW</span></h3>
+  <div class="terminal-panel">
+<span class="t-cmd">$ python query_live.py "loyalty service not awarding points after purchase, customer accounts not updating"</span>
+
+<span class="t-dim">╭────────────────────────────────────────────╮
+│ ops-knowledge-loop  |  Live Incident Query │  MOCK_MODE=TRUE  |  env: mock
+╰────────────────────────────────────────────╯</span>
+
+<span class="t-dim">Step 1 — Searching knowledge base...
+╭───┬────────────────┬──────────────────────────┬──────────────────────────────────────────────────╮
+│ # │ Source         │        Similarity        │ Excerpt                                          │
+├───┼────────────────┼──────────────────────────┼──────────────────────────────────────────────────┤</span>
+<span class="t-ok">│ 1 │ incidents.json │  0.642 ~ partial match   │ [INC0042145] loyalty-service failing to award pts│
+│ 2 │ incidents.json │  0.562 ~ partial match   │ [INC0041652] loyalty-service reward API 500      │
+│ 3 │ incidents.json │  0.561 ~ partial match   │ [INC0041134] loyalty-service negative balances   │</span>
+<span class="t-dim">╰───┴────────────────┴──────────────────────────┴──────────────────────────────────────────────────╯</span>
+
+<span class="t-warn">⚠ No close precedent — best match 0.642. AI will deduce a remediation.</span>
+
+<span class="t-dim">Step 2 — Requesting AI remediation recommendation...
+  Recommended Job  : </span><span class="t-warn">restart-service-rolling</span>
+<span class="t-dim">  Confidence       : </span><span class="t-warn">0.35  ← MODEL SELF-DOWNGRADED</span>
+<span class="t-dim">  Decision Gate    : </span><span class="t-pend">RULE-BASED FALLBACK</span>
+<span class="t-dim">  AI Source        : ollama:qwen3:14b
+  Reasoning        : Past loyalty-service issues resolved via restarts or config updates.
+                     Runbook context references backfill scripts — not a restart path.
+                     Semantic mismatch between query and available context. Self-downgraded.</span>
+
+<span class="t-dim">╭──────────────────────────────────────────────────────────────────────────────────────╮</span>
+<span class="t-pend">│ ⏸  PENDING HUMAN REVIEW  —  restart-service-rolling  (conf 0.35 &lt; 0.70 gate)        │</span>
+<span class="t-dim">╰──────────────────────────────────────────────────────────────────────────────────────╯
+Total runtime: 14.6s</span></div>
+  <aside class="notes">~20s. The key "gate as feature" case. Decent RAG precedent but runbook references a backfill script, not a restart path. Model recognised the mismatch and self-downgraded to 0.35. The gate correctly holds for human review.</aside>
+</section>
+
+
+
+
+
+<!-- ════════════════════════════════════════════════════════════
+     SLIDE 7 — WHY PENDING REVIEW IS A FEATURE
+     ════════════════════════════════════════════════════════════ -->
+<section data-slide="7">
+  <span class="slide-label">Design Philosophy</span>
+  <h2>The Gate is the Point</h2>
+  <div class="gate-cards">
+    <div class="gate-card fragment">
+      <div class="service-label">loyalty-service · 0.35</div>
+      <p>RAG matched past incidents but runbook referenced a backfill script, not a restart. <strong style="color:var(--amber)">Model self-downgraded.</strong></p>
+    </div>
+    <div class="gate-card fragment">
+      <div class="service-label">notification-service · 0.35</div>
+      <p>Matched incident was push notifications, not email. <strong style="color:var(--amber)">Semantic mismatch caught.</strong></p>
+    </div>
+    <div class="gate-card fragment">
+      <div class="service-label">supplier-EDI · 0.65</div>
+      <p>Schema validation failure; force-inventory-sync is plausible but not certain. <strong style="color:var(--amber)">Correctly held for review.</strong></p>
+    </div>
+  </div>
+  <div class="terminal-panel fragment" style="margin-top:0.6em">
+<span class="t-cmd">$ python query_live.py "loyalty service not awarding points after purchase, customer accounts not updating"</span>
+
+<span class="t-dim">Step 1 — Searching knowledge base...
+╭───┬────────────────┬──────────────────────────┬──────────────────────────────────────────────────────╮
+│ # │ Source         │        Similarity        │ Excerpt                                              │
+├───┼────────────────┼──────────────────────────┼──────────────────────────────────────────────────────┤</span>
+<span class="t-ok">│ 1 │ incidents.json │  0.642 ~ partial match   │ [INC0042145] loyalty-service failing to award pts    │
+│   │                │                          │ for click-and-collect — missing order type mapping   │
+│ 2 │ incidents.json │  0.562 ~ partial match   │ [INC0041652] reward redemption API 500 (DB pool)     │
+│ 3 │ incidents.json │  0.561 ~ partial match   │ [INC0041134] points returning negatives (bulk event) │</span>
+<span class="t-dim">╰───┴────────────────┴──────────────────────────┴──────────────────────────────────────────────────────╯</span>
+
+<span class="t-warn">⚠ No close precedent — best match 0.642. AI will deduce a remediation.</span>
+
+<span class="t-dim">  Recommended Job  : </span><span class="t-warn">restart-service-rolling</span>
+<span class="t-dim">  Confidence       : </span><span class="t-warn">0.35  ← MODEL SELF-DOWNGRADED</span>
+<span class="t-dim">  Decision Gate    : </span><span class="t-pend">RULE-BASED FALLBACK</span>
+<span class="t-dim">  Reasoning        : Runbook context references a backfill script — not a restart path.
+                     Semantic mismatch between query and available context.</span>
+<span class="t-pend">
+⏸  PENDING HUMAN REVIEW  —  restart-service-rolling (confidence 0.35 &lt; 0.70 gate)
+   On-call engineer sees this recommendation + RAG sources before any action is taken.
+</span><span class="t-dim">Total runtime: 14.6s</span></div>
+  <p class="fragment" style="font-family:var(--mono);font-size:0.66em;color:var(--teal);margin-top:0.8em;border-top:1px solid var(--border);padding-top:0.5em">
+    "A system that knows what it doesn't know is more useful than one that always fires"
+  </p>
+  <aside class="notes">
+    ~45s. This is the most important engineering decision in the project. The gate isn't a failure mode — it's a feature. Three examples of the model being appropriately humble. The loyalty service case is the best: RAG match is decent but the model recognises the runbook doesn't actually recommend a restart, so it self-downgrades to 0.35.
+  </aside>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     SLIDE 8 — TECH STACK
+     ════════════════════════════════════════════════════════════ -->
+<section data-slide="8">
+  <span class="slide-label">Technology</span>
+  <h2>Stack</h2>
+  <div class="stack-grid">
+    <div class="stack-chip fragment"><span class="tech-name">Python 3.11</span>Core pipeline</div>
+    <div class="stack-chip fragment"><span class="tech-name">ChromaDB</span>Vector store</div>
+    <div class="stack-chip fragment"><span class="tech-name">sentence-transformers</span>all-MiniLM-L6-v2 embeddings</div>
+    <div class="stack-chip fragment"><span class="tech-name">Ollama + qwen3:14b</span>Local LLM · 9.3GB · Q4_K_M · RTX 4090</div>
+    <div class="stack-chip fragment"><span class="tech-name">Flask</span>Ops dashboard</div>
+    <div class="stack-chip fragment"><span class="tech-name">Rich</span>CLI output formatting</div>
+    <div class="stack-chip fragment"><span class="tech-name">ServiceNow API</span>Mocked ticket source</div>
+    <div class="stack-chip fragment"><span class="tech-name">Rundeck</span>Mocked job execution</div>
+  </div>
+  <div class="callout-box fragment">
+    ▸ Runs entirely on local hardware &nbsp;·&nbsp; Zero external API calls &nbsp;·&nbsp; Zero ongoing cost
+  </div>
+  <aside class="notes">
+    ~20s. Standard modern Python MLOps stack. Everything local. The only thing that changes to make this production-ready is replacing the mock ServiceNow client and Rundeck client with real ones — the pipeline logic doesn't change.
+  </aside>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     SLIDE FUTURE — WHERE THIS GOES NEXT
+     ════════════════════════════════════════════════════════════ -->
+<section data-slide="future">
+  <span class="slide-label">Roadmap</span>
+  <h2>Where This Goes Next</h2>
+  <div class="gate-cards" style="grid-template-columns:1fr 1fr 1fr;margin-top:0.8em">
+    <div class="gate-card fragment">
+      <div class="service-label" style="color:var(--teal)">Shadow Deployment Pipeline</div>
+      <p>A parallel shadow environment mirrors all live traffic and incoming incidents without taking any action. When the pipeline's recommendations have earned sufficient confidence, a single approval promotes the shadow's configuration to production and tears down the shadow instance. Zero-downtime, zero-guesswork rollout — <strong style="color:var(--green)">the system validates itself before it acts.</strong></p>
+    </div>
+    <div class="gate-card fragment">
+      <div class="service-label" style="color:var(--teal)">Repository-Aware Context</div>
+      <p>Continuous indexing of service source repositories gives the LLM access to <strong style="color:var(--green)">code-level context — configuration files, dependency changes, recent commits —</strong> when an incident's root cause demands investigation beyond historical tickets and runbooks. The knowledge base grows to match the depth of the problem.</p>
+    </div>
+    <div class="gate-card fragment">
+      <div class="service-label" style="color:var(--teal)">Living Organisational Memory</div>
+      <p>Automatic ingestion of JIRA tickets, Confluence pages, and equivalent knowledge bases keeps the RAG context current with <strong style="color:var(--green)">the team's accumulated decisions, post-mortems, and architectural changes.</strong> The system learns continuously from every resolved incident and every documented decision — whether or not it was the one that triaged it.</p>
+    </div>
+  </div>
+  <aside class="notes">
+    ~30s. Three natural extensions. Shadow deployment closes the gap between recommendation and action. Repository indexing solves the "I need to look at the code" problem. Living organisational memory means the system never forgets a decision made in Confluence or a lesson captured in a JIRA post-mortem.
+  </aside>
+</section>
+
+
+
+<!-- ════════════════════════════════════════════════════════════
+     SLIDE BACKLOG — NEXT ON THE LIST
+     ════════════════════════════════════════════════════════════ -->
+<section data-slide="backlog">
+  <span class="slide-label">Roadmap</span>
+  <h2>Next on the List</h2>
+  <div class="stack-grid" style="grid-template-columns:1fr 1fr;gap:0.45em;margin-top:0.7em">
+    <div class="stack-chip fragment"><span class="tech-name">01 · Feedback Loop</span>Engineer overrides become high-signal labelled examples that improve future recommendations automatically.</div>
+    <div class="stack-chip fragment"><span class="tech-name">02 · Multi-Incident Correlation</span>When five services degrade at once, switch to cascading-failure reasoning instead of isolated ticket triage.</div>
+    <div class="stack-chip fragment"><span class="tech-name">03 · Confidence Calibration</span>Use a held-out labelled set and reliability diagram to verify that 0.75 confidence means roughly 75% correct.</div>
+    <div class="stack-chip fragment"><span class="tech-name">04 · Streaming Output</span>Stream reasoning token by token in the dashboard so engineers can interrupt a bad reasoning path early.</div>
+  </div>
+  <div class="callout-box fragment" style="margin-top:0.7em">
+    ▸ Slack / PagerDuty integration brings pending-review recommendations into the engineer's existing workflow.
+  </div>
+  <aside class="notes">~30s. This is the product backlog: learn from overrides, reason across correlated failures, calibrate confidence, stream reasoning, and meet engineers in Slack or PagerDuty.</aside>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     SLIDE OBS — OBSERVABILITY
+     ════════════════════════════════════════════════════════════ -->
+<section data-slide="obs">
+  <span class="slide-label">Production Readiness</span>
+  <h2>Observability</h2>
+  <div class="gate-cards" style="grid-template-columns:1fr 1fr 1fr;margin-top:0.8em">
+    <div class="gate-card fragment">
+      <div class="service-label" style="color:var(--teal)">Log Every Step</div>
+      <p>RAG top-K + similarity scores, LLM token counts + latency, every gate confidence and outcome, every Rundeck execution result.</p>
+    </div>
+    <div class="gate-card fragment">
+      <div class="service-label" style="color:var(--teal)">Dashboards</div>
+      <p>Confidence distribution over time, auto-execution rate, false positive rate, and P99 latency per pipeline stage.</p>
+    </div>
+    <div class="gate-card fragment">
+      <div class="service-label" style="color:var(--teal)">Alerts</div>
+      <p>Confidence distribution shift, fallback rate increase, and any Rundeck failure without a subsequent human resolution.</p>
+    </div>
+  </div>
+  <p class="fragment" style="font-family:var(--mono);font-size:0.64em;color:var(--text-dim);margin-top:0.8em;border-top:1px solid var(--border);padding-top:0.5em">
+    Sudden confidence drops are a production smell: stale knowledge base, model version drift, or a retrieval-quality regression.
+  </p>
+  <aside class="notes">~30s. The observability story is straightforward: log the retrieval, model call, gate decision, and execution outcome. From that, build confidence and latency dashboards and alert on drift.</aside>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     SLIDE PROD — FROM DEMO TO PRODUCTION
+     ════════════════════════════════════════════════════════════ -->
+<section data-slide="prod">
+  <span class="slide-label">Production Path</span>
+  <h2>From Demo to Production</h2>
+  <div class="pipeline" style="margin-top:0.8em">
+    <div class="pipe-stage fragment"><span class="stage-num">01</span><span>ServiceNow mock</span><span class="arrow">→</span><span>real webhook API</span></div>
+    <div class="pipe-stage fragment"><span class="stage-num">02</span><span>ChromaDB local</span><span class="arrow">→</span><span>managed vector store</span></div>
+    <div class="pipe-stage fragment"><span class="stage-num">03</span><span>Ollama local</span><span class="arrow">→</span><span>hosted or private LLM endpoint</span></div>
+    <div class="pipe-stage fragment"><span class="stage-num">04</span><span>single demo run</span><span class="arrow">→</span><span>queued concurrent triage</span></div>
+  </div>
+  <div class="callout-box fragment" style="margin-top:0.8em">
+    ▸ Retrieval at scale improves recall first, then needs mitigation: reindex with better embeddings, filter by service namespace, and combine vector search with BM25.
+  </div>
+  <aside class="notes">~35s. Productionising this is mostly replacing mocks and adding operational hardening: real ServiceNow webhooks, managed vector storage, a production LLM endpoint, queueing, and retrieval scaling controls.</aside>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     SLIDE 9 — CLOSING
+     ════════════════════════════════════════════════════════════ -->
+<section data-slide="9">
+  <span class="slide-label">Summary</span>
+  <h2>What This Demonstrates</h2>
+  <ul class="closing-bullets">
+    <li class="fragment">
+      <span class="bullet-num">01</span>
+      Production-pattern RAG pipeline with real similarity scoring
+    </li>
+    <li class="fragment">
+      <span class="bullet-num">02</span>
+      LLM structured output with confidence-gated automation
+    </li>
+    <li class="fragment">
+      <span class="bullet-num">03</span>
+      Human-in-the-loop safety by design, not by accident
+    </li>
+    <li class="fragment">
+      <span class="bullet-num">04</span>
+      Extensible to real ServiceNow + Rundeck with config changes only
+    </li>
+  </ul>
+  <aside class="notes">
+    ~30s. Four things this project proves: RAG is viable for ops triage; structured LLM output is reliable enough to gate automation; safety is a first-class concern; it's not a toy — swap the mock clients and this runs in production. Thank you.
+  </aside>
+</section>
+
+
+
+<!-- ════════════════════════════════════════════════════════════
+     APPENDIX — ADDITIONAL TERMINAL OUTPUTS
+     ════════════════════════════════════════════════════════════ -->
+<section data-slide="ax">
+  <span class="slide-label">Appendix</span>
+  <h2>Additional Terminal Outputs</h2>
+  <div class="callout-box fragment" style="margin-top:1em">
+    ▸ Seven extra incident runs are kept here for deeper Q&amp;A if the manager wants to inspect the wider behaviour set.
+  </div>
+  <div class="auto-counter fragment" style="margin-top:1em">
+    Main walkthrough kept <span>Q1</span>, <span>Q3</span>, and <span class="pend-n">Q6</span>; appendix keeps Q2, Q4, Q5, Q7, Q8, Q9, and Q10.
+  </div>
+  <aside class="notes">Appendix separator. Only use these if the conversation turns into a deeper inspection of individual query behaviour.</aside>
+</section>
+
+<section data-slide="q2">
+  <span class="slide-label">Live Output — Query 2 / 10</span>
+  <h3 style="color:var(--green)">payment-processor 500 errors &nbsp;·&nbsp; <span style="color:var(--teal)">0.95 → AUTO-EXECUTE</span></h3>
+  <div class="terminal-panel">
+<span class="t-cmd">$ python query_live.py "payment processor returning 500 errors, transactions not completing at checkout"</span>
+
+<span class="t-dim">╭────────────────────────────────────────────╮
+│ ops-knowledge-loop  |  Live Incident Query │  MOCK_MODE=TRUE  |  env: mock
+╰────────────────────────────────────────────╯</span>
+
+<span class="t-dim">Step 1 — Searching knowledge base...
+╭───┬────────────────┬──────────────────────────┬──────────────────────────────────────────────────╮
+│ # │ Source         │        Similarity        │ Excerpt                                          │
+├───┼────────────────┼──────────────────────────┼──────────────────────────────────────────────────┤</span>
+<span class="t-warn">│ 1 │ incidents.json │    0.495 ✗ weak match    │ [INC0043135] payment-processor 5xx spike (70%)   │
+│ 2 │ incidents.json │    0.492 ✗ weak match    │ [INC0043231] payment-processor 5xx spike (72%)   │
+│ 3 │ incidents.json │    0.488 ✗ weak match    │ [INC0043183] payment-processor 5xx spike (71%)   │</span>
+<span class="t-dim">╰───┴────────────────┴──────────────────────────┴──────────────────────────────────────────────────╯</span>
+
+<span class="t-warn">⚠ No close precedent — best match 0.495. AI will deduce a remediation.</span>
+
+<span class="t-dim">Step 2 — Requesting AI remediation recommendation...
+  Recommended Job  : </span><span class="t-ok">rollback-to-previous-version</span>
+<span class="t-dim">  Confidence       : </span><span class="t-ok">0.95</span>
+<span class="t-dim">  Decision Gate    : </span><span class="t-auto">AUTO-EXECUTE</span>
+<span class="t-dim">  AI Source        : ollama:qwen3:14b
+  Reasoning        : Three prior payment-processor 5xx spikes all resolved by rollback.
+                     Standard mitigation confirmed despite weak RAG similarity scores.</span>
+
+<span class="t-dim">╭──────────────────────────────────────────────────────────────────────────────────────╮</span>
+<span class="t-auto">│ ✓ WOULD AUTO-EXECUTE  —  rollback-to-previous-version  (conf 0.95 ≥ 0.70 gate)      │</span>
+<span class="t-dim">╰──────────────────────────────────────────────────────────────────────────────────────╯
+Total runtime: 8.2s</span></div>
+  <aside class="notes">~20s. Weak RAG (all three below 0.50) but model returns 0.95 via pattern recognition — three prior incidents with the same fingerprint all resolved by rollback. The LLM is doing the heavy lifting here, correctly overriding the low similarity scores.</aside>
+</section>
+
+<section data-slide="q4">
+  <span class="slide-label">Live Output — Query 4 / 10</span>
+  <h3 style="color:var(--green)">inventory sync stalled &nbsp;·&nbsp; <span style="color:var(--amber)">0.66 → PENDING REVIEW</span></h3>
+  <div class="terminal-panel">
+<span class="t-cmd">$ python query_live.py "inventory sync stalled, stock levels on website not updating after warehouse batch job"</span>
+
+<span class="t-dim">╭────────────────────────────────────────────╮
+│ ops-knowledge-loop  |  Live Incident Query │  MOCK_MODE=TRUE  |  env: mock
+╰────────────────────────────────────────────╯</span>
+
+<span class="t-dim">Step 1 — Searching knowledge base...
+╭───┬────────────────┬──────────────────────────┬──────────────────────────────────────────────────╮
+│ # │ Source         │        Similarity        │ Excerpt                                          │
+├───┼────────────────┼──────────────────────────┼──────────────────────────────────────────────────┤</span>
+<span class="t-ok">│ 1 │ incidents.json │  0.675 ~ partial match   │ [INC0041047] inventory-sync batch job failed     │
+│ 2 │ incidents.json │  0.656 ~ partial match   │ [INC0043477] inventory-sync pipeline stall 75min │
+│ 3 │ incidents.json │  0.639 ~ partial match   │ [INC0042043] inventory-sync failing 14 stores    │</span>
+<span class="t-dim">╰───┴────────────────┴──────────────────────────┴──────────────────────────────────────────────────╯</span>
+
+<span class="t-ok">✓ Strong precedent found — incidents.json (similarity 0.675)</span>
+
+<span class="t-dim">Step 2 — Requesting AI remediation recommendation...
+  Recommended Job  : </span><span class="t-warn">force-inventory-sync</span>
+<span class="t-dim">  Confidence       : </span><span class="t-warn">0.66</span>
+<span class="t-dim">  Decision Gate    : </span><span class="t-pend">PENDING REVIEW</span>
+<span class="t-dim">  AI Source        : ollama:qwen3:14b
+  Reasoning        : Stalled sync mirrors INC0043477 pipeline-stall scenario exactly.
+                     force-inventory-sync would resolve — confidence just below gate threshold.</span>
+
+<span class="t-dim">╭──────────────────────────────────────────────────────────────────────────────────────╮</span>
+<span class="t-pend">│ ⏸  PENDING HUMAN REVIEW  —  force-inventory-sync  (confidence 0.66 &lt; 0.70 gate)     │</span>
+<span class="t-dim">╰──────────────────────────────────────────────────────────────────────────────────────╯
+Total runtime: 15.4s</span></div>
+  <aside class="notes">~15s. Good precedent found, clear recommendation — but 0.66 missed the gate by 0.04. The engineer receives the full briefing: the matching incidents, the recommended fix, and the model's reasoning. Human takes 10 seconds to approve rather than triage from scratch.</aside>
+</section>
+
+<section data-slide="q5">
+  <span class="slide-label">Live Output — Query 5 / 10</span>
+  <h3 style="color:var(--green)">store POS tills unresponsive &nbsp;·&nbsp; <span style="color:var(--teal)">0.75 → AUTO-EXECUTE</span></h3>
+  <div class="terminal-panel">
+<span class="t-cmd">$ python query_live.py "store POS system tills unresponsive, cashiers cannot process customer transactions"</span>
+
+<span class="t-dim">╭────────────────────────────────────────────╮
+│ ops-knowledge-loop  |  Live Incident Query │  MOCK_MODE=TRUE  |  env: mock
+╰────────────────────────────────────────────╯</span>
+
+<span class="t-dim">Step 1 — Searching knowledge base...
+╭───┬────────────────┬──────────────────────────┬──────────────────────────────────────────────────╮
+│ # │ Source         │        Similarity        │ Excerpt                                          │
+├───┼────────────────┼──────────────────────────┼──────────────────────────────────────────────────┤</span>
+<span class="t-ok">│ 1 │ incidents.json │  0.573 ~ partial match   │ [INC0043165] store-pos-system pipeline stall     │
+│ 2 │ incidents.json │  0.569 ~ partial match   │ [INC0043333] store-pos-system pipeline stall     │</span>
+<span class="t-warn">│ 3 │ incidents.json │    0.547 ✗ weak match    │ [INC0041062] store-pos-system API latency spike  │</span>
+<span class="t-dim">╰───┴────────────────┴──────────────────────────┴──────────────────────────────────────────────────╯</span>
+
+<span class="t-warn">⚠ No close precedent — best match 0.573. AI will deduce a remediation.</span>
+
+<span class="t-dim">Step 2 — Requesting AI remediation recommendation...
+  Recommended Job  : </span><span class="t-ok">rollback-to-previous-version</span>
+<span class="t-dim">  Confidence       : </span><span class="t-ok">0.75</span>
+<span class="t-dim">  Decision Gate    : </span><span class="t-auto">ABOVE GATE → AUTO-EXECUTE</span>
+<span class="t-dim">  AI Source        : ollama:qwen3:14b
+  Reasoning        : P1 incident — Consul mesh misconfiguration caused 2,300-store outage.
+                     Configuration rollback was the confirmed resolution. Pattern matches.</span>
+
+<span class="t-dim">╭──────────────────────────────────────────────────────────────────────────────────────╮</span>
+<span class="t-auto">│ ✓ WOULD AUTO-EXECUTE  —  rollback-to-previous-version  (conf 0.75 ≥ 0.70 gate)      │</span>
+<span class="t-dim">╰──────────────────────────────────────────────────────────────────────────────────────╯
+Total runtime: 9.9s</span></div>
+  <aside class="notes">~15s. Weak RAG but model correctly deduced rollback from a P1 context — store-wide Consul mesh outage resolved by config rollback. The AI reasoned beyond the low similarity score. 0.75 fires the gate.</aside>
+</section>
+
+<section data-slide="q7">
+  <span class="slide-label">Live Output — Query 7 / 10</span>
+  <h3 style="color:var(--green)">order fulfilment latency spike &nbsp;·&nbsp; <span style="color:var(--teal)">0.75 → AUTO-EXECUTE</span></h3>
+  <div class="terminal-panel">
+<span class="t-cmd">$ python query_live.py "order fulfilment delays caused by upstream pricing engine latency spike during peak hours"</span>
+
+<span class="t-dim">╭────────────────────────────────────────────╮
+│ ops-knowledge-loop  |  Live Incident Query │  MOCK_MODE=TRUE  |  env: mock
+╰────────────────────────────────────────────╯</span>
+
+<span class="t-dim">Step 1 — Searching knowledge base...
+╭───┬────────────────┬──────────────────────────┬──────────────────────────────────────────────────╮
+│ # │ Source         │        Similarity        │ Excerpt                                          │
+├───┼────────────────┼──────────────────────────┼──────────────────────────────────────────────────┤</span>
+<span class="t-ok">│ 1 │ incidents.json │  0.571 ~ partial match   │ [INC0043496] order-fulfilment P99 breach (1102ms)│
+│ 2 │ incidents.json │  0.565 ~ partial match   │ [INC0043448] order-fulfilment P99 breach (4926ms)│
+│ 3 │ incidents.json │  0.558 ~ partial match   │ [INC0043304] order-fulfilment P99 breach (798ms) │</span>
+<span class="t-dim">╰───┴────────────────┴──────────────────────────┴──────────────────────────────────────────────────╯</span>
+
+<span class="t-warn">⚠ No close precedent — best match 0.571. AI will deduce a remediation.</span>
+
+<span class="t-dim">Step 2 — Requesting AI remediation recommendation...
+  Recommended Job  : </span><span class="t-ok">scale-up-replicas</span>
+<span class="t-dim">  Confidence       : </span><span class="t-ok">0.75</span>
+<span class="t-dim">  Decision Gate    : </span><span class="t-auto">ABOVE GATE → AUTO-EXECUTE</span>
+<span class="t-dim">  AI Source        : ollama:qwen3:14b
+  Reasoning        : Upstream latency causes downstream throughput pressure.
+                     Scaling replicas reduces per-instance load while root cause is addressed.</span>
+
+<span class="t-dim">╭──────────────────────────────────────────────────────────────────────────────────────╮</span>
+<span class="t-auto">│ ✓ WOULD AUTO-EXECUTE  —  scale-up-replicas  (confidence 0.75 ≥ 0.70 gate)           │</span>
+<span class="t-dim">╰──────────────────────────────────────────────────────────────────────────────────────╯
+Total runtime: 12.2s</span></div>
+  <aside class="notes">~15s. Three partial matches on order-fulfilment P99 latency. Model correctly maps upstream load to a scaling response. Scale-up-replicas buys time while the pricing engine is investigated.</aside>
+</section>
+
+<section data-slide="q8">
+  <span class="slide-label">Live Output — Query 8 / 10</span>
+  <h3 style="color:var(--green)">notification service duplicate emails &nbsp;·&nbsp; <span style="color:var(--amber)">0.35 → PENDING REVIEW</span></h3>
+  <div class="terminal-panel">
+<span class="t-cmd">$ python query_live.py "notification service sending duplicate confirmation emails to customers after every order event"</span>
+
+<span class="t-dim">╭────────────────────────────────────────────╮
+│ ops-knowledge-loop  |  Live Incident Query │  MOCK_MODE=TRUE  |  env: mock
+╰────────────────────────────────────────────╯</span>
+
+<span class="t-dim">Step 1 — Searching knowledge base...
+╭───┬────────────────────────┬──────────────────────────┬────────────────────────────────────────────╮
+│ # │ Source                 │        Similarity        │ Excerpt                                    │
+├───┼────────────────────────┼──────────────────────────┼────────────────────────────────────────────┤</span>
+<span class="t-ok">│ 1 │ incidents.json         │  0.687 ~ partial match   │ [INC0041294] notification-svc duplicate    │
+│   │                        │                          │ PUSH notifications (order-fulfilment retry)│</span>
+<span class="t-warn">│ 2 │ incidents.json         │    0.520 ✗ weak match    │ [INC0041158] notification-svc email queue  │
+│ 3 │ INC0042468-notif-...md │    0.467 ✗ weak match    │ Auto-generated runbook: unsubscribe links  │</span>
+<span class="t-dim">╰───┴────────────────────────┴──────────────────────────┴────────────────────────────────────────────╯</span>
+
+<span class="t-ok">✓ Strong precedent found — incidents.json (similarity 0.687)</span>
+<span class="t-warn">  [note: matched push notifications, not email — semantic mismatch]</span>
+
+<span class="t-dim">Step 2 — Requesting AI remediation recommendation...
+  Recommended Job  : </span><span class="t-warn">restart-service-with-memory-bump</span>
+<span class="t-dim">  Confidence       : </span><span class="t-warn">0.35  ← MODEL SELF-DOWNGRADED</span>
+<span class="t-dim">  Decision Gate    : </span><span class="t-pend">RULE-BASED FALLBACK</span>
+<span class="t-dim">  AI Source        : ollama:qwen3:14b
+  Reasoning        : Runbook context (INC0042468) used restart-with-memory-bump for config issue.
+                     Current incident involves email duplicates, not push notifications.
+                     Semantic mismatch between incident type and available context.</span>
+
+<span class="t-dim">╭──────────────────────────────────────────────────────────────────────────────────────╮</span>
+<span class="t-pend">│ ⏸  PENDING HUMAN REVIEW  —  restart-service-with-memory-bump  (conf 0.35 &lt; 0.70)    │</span>
+<span class="t-dim">╰──────────────────────────────────────────────────────────────────────────────────────╯
+Total runtime: 22.5s</span></div>
+  <aside class="notes">~20s. Highest RAG similarity of any pending-review case (0.687) — but the match is for push notifications, not email. The third source is an auto-generated runbook. The model caught the semantic mismatch and self-downgraded to 0.35.</aside>
+</section>
+
+<section data-slide="q9">
+  <span class="slide-label">Live Output — Query 9 / 10</span>
+  <h3 style="color:var(--green)">supplier EDI orders dropped &nbsp;·&nbsp; <span style="color:var(--amber)">0.65 → PENDING REVIEW</span></h3>
+  <div class="terminal-panel">
+<span class="t-cmd">$ python query_live.py "supplier integration service dropping EDI purchase orders during XML schema validation"</span>
+
+<span class="t-dim">╭────────────────────────────────────────────╮
+│ ops-knowledge-loop  |  Live Incident Query │  MOCK_MODE=TRUE  |  env: mock
+╰────────────────────────────────────────────╯</span>
+
+<span class="t-dim">Step 1 — Searching knowledge base...
+╭───┬────────────────┬──────────────────────────┬──────────────────────────────────────────────────╮
+│ # │ Source         │        Similarity        │ Excerpt                                          │
+├───┼────────────────┼──────────────────────────┼──────────────────────────────────────────────────┤</span>
+<span class="t-ok">│ 1 │ incidents.json │  0.705 ~ partial match   │ [INC0041737] supplier-integration EDI batch      │
+│   │                │                          │ failure — Supplier-31 schema version mismatch    │
+│ 2 │ incidents.json │  0.561 ~ partial match   │ [INC0043383] supplier-integration ETL failure    │</span>
+<span class="t-warn">│ 3 │ incidents.json │    0.542 ✗ weak match    │ [INC0041195] supplier-integration EDI timeout    │</span>
+<span class="t-dim">╰───┴────────────────┴──────────────────────────┴──────────────────────────────────────────────────╯</span>
+
+<span class="t-ok">✓ Strong precedent found — incidents.json (similarity 0.705)</span>
+
+<span class="t-dim">Step 2 — Requesting AI remediation recommendation...
+  Recommended Job  : </span><span class="t-warn">force-inventory-sync</span>
+<span class="t-dim">  Confidence       : </span><span class="t-warn">0.65</span>
+<span class="t-dim">  Decision Gate    : </span><span class="t-pend">PENDING REVIEW</span>
+<span class="t-dim">  AI Source        : ollama:qwen3:14b
+  Reasoning        : EDI orders dropped during XML schema validation matches INC0041737 closely.
+                     force-inventory-sync addresses data pipeline stalls, not schema mismatches.
+                     Plausible mitigation, but not the correct root-cause fix. Correctly held.</span>
+
+<span class="t-dim">╭──────────────────────────────────────────────────────────────────────────────────────╮</span>
+<span class="t-pend">│ ⏸  PENDING HUMAN REVIEW  —  force-inventory-sync  (confidence 0.65 &lt; 0.70 gate)    │</span>
+<span class="t-dim">╰──────────────────────────────────────────────────────────────────────────────────────╯
+Total runtime: 25.7s</span></div>
+  <aside class="notes">~20s. Best RAG match of any pending-review case (0.705, directly relevant EDI incident) — but force-inventory-sync doesn't fix schema validation errors. The model acknowledged the mismatch between the recommended job and the actual root cause, and correctly held at 0.65.</aside>
+</section>
+
+<section data-slide="q10">
+  <span class="slide-label">Live Output — Query 10 / 10</span>
+  <h3 style="color:var(--green)">recommendation engine degraded &nbsp;·&nbsp; <span style="color:var(--amber)">0.45 → PENDING REVIEW</span></h3>
+  <div class="terminal-panel">
+<span class="t-cmd">$ python query_live.py "recommendation engine returning identical product suggestions for all users after overnight model retraining"</span>
+
+<span class="t-dim">╭────────────────────────────────────────────╮
+│ ops-knowledge-loop  |  Live Incident Query │  MOCK_MODE=TRUE  |  env: mock
+╰────────────────────────────────────────────╯</span>
+
+<span class="t-dim">Step 1 — Searching knowledge base...
+╭───┬────────────────┬──────────────────────────┬──────────────────────────────────────────────────╮
+│ # │ Source         │        Similarity        │ Excerpt                                          │
+├───┼────────────────┼──────────────────────────┼──────────────────────────────────────────────────┤</span>
+<span class="t-warn">│ 1 │ incidents.json │    0.393 ✗ weak match    │ [INC0041839] product-search autocomplete empty   │
+│ 2 │ incidents.json │    0.356 ✗ weak match    │ [INC0043065] product-search feature flag misconf │
+│ 3 │ incidents.json │    0.315 ✗ weak match    │ [INC0043017] product-search feature flag misconf │</span>
+<span class="t-dim">╰───┴────────────────┴──────────────────────────┴──────────────────────────────────────────────────╯</span>
+
+<span class="t-warn">⚠ No close precedent — best match 0.393. AI will deduce a remediation.
+  [all three matches are from a different service; zero relevant knowledge base entries]</span>
+
+<span class="t-dim">Step 2 — Requesting AI remediation recommendation...
+  Recommended Job  : </span><span class="t-warn">reindex-elasticsearch</span>
+<span class="t-dim">  Confidence       : </span><span class="t-warn">0.45  ← ACKNOWLEDGING LIMITS</span>
+<span class="t-dim">  Decision Gate    : </span><span class="t-pend">RULE-BASED FALLBACK</span>
+<span class="t-dim">  AI Source        : ollama:qwen3:14b
+  Reasoning        : Identical suggestions indicate stale/improperly updated index data.
+                     No recommendation-engine incidents in knowledge base. Cross-service inference
+                     only. Model self-downgraded — this is the system acknowledging its limits.</span>
+
+<span class="t-dim">╭──────────────────────────────────────────────────────────────────────────────────────╮</span>
+<span class="t-pend">│ ⏸  PENDING HUMAN REVIEW  —  reindex-elasticsearch  (confidence 0.45 &lt; 0.70 gate)   │</span>
+<span class="t-dim">╰──────────────────────────────────────────────────────────────────────────────────────╯
+Total runtime: 13.8s</span></div>
+  <aside class="notes">~20s. Hardest case — all three RAG matches are weak and from the wrong service. The knowledge base has no recommendation-engine incidents at all. The model acknowledges this, self-downgrades to 0.45, and routes to human review. The system knows what it doesn't know.</aside>
+</section>
+
+</div><!-- /slides -->
+</div><!-- /reveal -->
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script>
+// Inject placeholders
+document.addEventListener('DOMContentLoaded', function() {
+  const d = document.getElementById('days-token');
+  const r = document.getElementById('role-token');
+  if (d) d.textContent = DEMO_DAYS;
+  if (r) r.textContent = DEMO_ROLE_NAME;
+});
+
+// Reveal init
+Reveal.initialize({
+  hash: true,
+  transition: 'slide',
+  transitionSpeed: 'default',
+  controls: true,
+  controlsTutorial: false,
+  progress: true,
+  slideNumber: false,
+  overview: true,
+  center: false,
+  keyboard: true,
+  touch: true,
+  loop: false,
+  fragments: true,
+  fragmentInURL: false,
+  help: true,
+  width: 1280,
+  height: 720,
+  margin: 0,
+  minScale: 0.4,
+  maxScale: 2.0,
+  plugins: []
+});
+
+// Status bar update
+Reveal.on('slidechanged', function(event) {
+  const total = document.querySelectorAll('.reveal .slides > section').length;
+  const n = event.indexh + 1;
+  document.getElementById('status-slide').textContent = 'slide ' + n + '/' + total;
+});
+
+// Animate auto/pend counters on slide 6
+Reveal.on('slidechanged', function(event) {
+  const sec = event.currentSlide;
+  if (sec && sec.dataset.slide === '6') {
+    animateCounters();
+  }
+});
+
+function animateCounters() {
+  const autoEl = document.getElementById('auto-count');
+  const pendEl = document.getElementById('pend-count');
+  if (!autoEl || !pendEl) return;
+  let a = 0, p = 0;
+  const interval = setInterval(function() {
+    if (a < 5) { a++; autoEl.textContent = a; }
+    if (p < 5) { p++; pendEl.textContent = p; }
+    if (a >= 5 && p >= 5) clearInterval(interval);
+  }, 180);
+}
+
+// Pipeline stage sequential glow
+Reveal.on('slidechanged', function(event) {
+  const sec = event.currentSlide;
+  if (sec && sec.dataset.slide === '3') {
+    animatePipeline();
+  }
+});
+
+function animatePipeline() {
+  const stages = ['ps1','ps2','ps3','ps4','ps5'];
+  stages.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('active');
+  });
+  stages.forEach(function(id, i) {
+    setTimeout(function() {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('active');
+    }, i * 600);
+  });
+}
+</script>
+</body>
+</html>

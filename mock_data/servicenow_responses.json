@@ -1,0 +1,80 @@
+{
+  "result": [
+    {
+      "sys_id": "3f9b2c1a8a5c4e7d9b1f2e0c8a4d6b21",
+      "number": "INC0042536",
+      "short_description": "payment-processor audit log writes failing — CloudSQL disk at 95% capacity in prod-uk",
+      "description": "payment-processor audit log inserts have been failing intermittently since 16:08 UTC. The underlying CloudSQL Postgres instance for the audit trail is at 95% disk capacity and write IO is being throttled. PCI compliance requires every payment authorisation to have a corresponding audit record, so dropped writes are a P2 PCI risk regardless of customer impact. No customer-visible payment failures yet.",
+      "priority": "P2",
+      "state": "1",
+      "state_label": "open",
+      "assigned_to": {
+        "display_value": "Payments Platform On-Call",
+        "value": "payments-oncall"
+      },
+      "opened_at": "2026-05-04T16:08:00Z",
+      "category": "infrastructure",
+      "u_service": "payment-processor",
+      "u_namespace": "prod-uk",
+      "u_tags": [
+        "payment",
+        "audit-log",
+        "cloudsql",
+        "disk-capacity",
+        "pci",
+        "compliance-risk"
+      ]
+    },
+    {
+      "sys_id": "7e1c4a9d2b6f4a3e8c0d5b9a1f4e7c33",
+      "number": "INC0042570",
+      "short_description": "loyalty-service audit trail missing for 3,200 point redemption transactions",
+      "description": "Reconciliation job at 14:00 UTC detected 3,200 loyalty-point redemption transactions that have no corresponding audit-trail entry between 08:15 and 09:42. Customer-facing impact: none visible. Internal impact: audit gap means we cannot prove the redemptions were authorised, which fails our annual SOC2 review if not remediated. Cause appears to be the audit-publisher consumer falling silently behind during the Kafka rebalance event reported in INC0042569.",
+      "priority": "P2",
+      "state": "1",
+      "state_label": "open",
+      "assigned_to": {
+        "display_value": "Loyalty Platform On-Call",
+        "value": "loyalty-oncall"
+      },
+      "opened_at": "2026-05-05T14:18:00Z",
+      "category": "data",
+      "u_service": "loyalty-service",
+      "u_namespace": "prod-uk",
+      "u_tags": [
+        "loyalty",
+        "audit-trail",
+        "kafka",
+        "data-integrity",
+        "soc2"
+      ]
+    },
+    {
+      "sys_id": "b2d9e8f7c0a14b6d8e3c5f9a2b7d4e88",
+      "number": "INC0042434",
+      "short_description": "pricing-engine prod-uk showing weekend promotional prices on Monday morning",
+      "description": "Multiple customer reports and one tabloid mention that pricing-engine is serving Saturday-Sunday promotional prices into Monday morning. The price-rollback CronJob that runs at 00:05 UTC every Monday failed silently at 00:05 today — the job pod terminated before the rollback completed. ~14,000 SKUs are affected, mostly outdoor furniture and BBQs. Customer trust impact is the primary concern; estimated direct margin loss is approximately £18,000/hour.",
+      "priority": "P2",
+      "state": "1",
+      "state_label": "open",
+      "assigned_to": {
+        "display_value": "Pricing Platform On-Call",
+        "value": "pricing-oncall"
+      },
+      "opened_at": "2026-05-04T08:42:00Z",
+      "category": "data",
+      "u_service": "pricing-engine",
+      "u_namespace": "prod-uk",
+      "u_tags": [
+        "pricing",
+        "cronjob",
+        "silent-failure",
+        "trust-impact",
+        "margin-impact"
+      ]
+    }
+  ],
+  "_links": {
+    "next": null
+  }
+}

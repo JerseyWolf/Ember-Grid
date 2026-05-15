@@ -1,0 +1,178 @@
+[
+  {
+    "uuid": "a1b2c3d4-0001-0001-0001-000000000001",
+    "name": "restart-service-rolling",
+    "description": "Rolling restart of a GKE deployment with zero downtime. Safe for all services and the default first-line remediation for stale-state or transient-failure incidents.",
+    "target_services": [
+      "checkout-service",
+      "payment-processor",
+      "product-search",
+      "inventory-sync",
+      "store-pos-system",
+      "order-fulfilment"
+    ],
+    "avg_duration_seconds": 180,
+    "confidence_threshold": 0.6,
+    "parameters": [
+      "service_name",
+      "namespace"
+    ],
+    "risk_level": "low"
+  },
+  {
+    "uuid": "a1b2c3d4-0002-0001-0001-000000000002",
+    "name": "restart-service-with-memory-bump",
+    "description": "Rolling restart that also raises the Kubernetes memory limit for the deployment. The canonical fix for OOM-kill incidents during promotional events, especially on checkout-service.",
+    "target_services": [
+      "checkout-service",
+      "payment-processor"
+    ],
+    "avg_duration_seconds": 240,
+    "confidence_threshold": 0.65,
+    "parameters": [
+      "service_name",
+      "namespace",
+      "memory_limit"
+    ],
+    "risk_level": "medium"
+  },
+  {
+    "uuid": "a1b2c3d4-0003-0001-0001-000000000003",
+    "name": "scale-up-replicas",
+    "description": "Increase HPA min replicas for a deployment. Safe for stateless services, used during promotional traffic spikes or when latency is climbing but pods are healthy.",
+    "target_services": [
+      "checkout-service",
+      "payment-processor",
+      "product-search",
+      "order-fulfilment",
+      "store-pos-system"
+    ],
+    "avg_duration_seconds": 120,
+    "confidence_threshold": 0.6,
+    "parameters": [
+      "service_name",
+      "namespace",
+      "replicas"
+    ],
+    "risk_level": "low"
+  },
+  {
+    "uuid": "a1b2c3d4-0004-0001-0001-000000000004",
+    "name": "rollback-to-previous-version",
+    "description": "Roll a GKE deployment back to the previous Harness artifact version. Used when a recent deploy introduced the failure mode and rolling forward would be slower than reverting.",
+    "target_services": [
+      "checkout-service",
+      "payment-processor",
+      "product-search",
+      "inventory-sync",
+      "store-pos-system",
+      "order-fulfilment"
+    ],
+    "avg_duration_seconds": 300,
+    "confidence_threshold": 0.75,
+    "parameters": [
+      "service_name",
+      "namespace"
+    ],
+    "risk_level": "medium"
+  },
+  {
+    "uuid": "a1b2c3d4-0005-0001-0001-000000000005",
+    "name": "clear-redis-cache",
+    "description": "Flush a named Redis cache. Used when checkout sessions are bloated or product-search result cache is thrashing after a pricing-engine bulk update.",
+    "target_services": [
+      "checkout-service",
+      "product-search"
+    ],
+    "avg_duration_seconds": 60,
+    "confidence_threshold": 0.6,
+    "parameters": [
+      "cache_name"
+    ],
+    "risk_level": "low"
+  },
+  {
+    "uuid": "a1b2c3d4-0006-0001-0001-000000000006",
+    "name": "reindex-elasticsearch",
+    "description": "Full reindex of the product-search Elasticsearch index from the canonical catalog. Takes approximately 40 minutes; during the rebuild, search returns slightly stale results — this is expected.",
+    "target_services": [
+      "product-search"
+    ],
+    "avg_duration_seconds": 2400,
+    "confidence_threshold": 0.75,
+    "parameters": [
+      "index",
+      "source",
+      "mode"
+    ],
+    "risk_level": "medium"
+  },
+  {
+    "uuid": "a1b2c3d4-0007-0001-0001-000000000007",
+    "name": "force-inventory-sync",
+    "description": "Trigger a manual inventory-sync run against the IBM AS/400 warehouse system, with strict record-count validation enabled. Standard fix for the silent zero-record write failure mode.",
+    "target_services": [
+      "inventory-sync"
+    ],
+    "avg_duration_seconds": 600,
+    "confidence_threshold": 0.7,
+    "parameters": [
+      "source",
+      "mode",
+      "validation"
+    ],
+    "risk_level": "low"
+  },
+  {
+    "uuid": "a1b2c3d4-0008-0001-0001-000000000008",
+    "name": "drain-and-cordon-node",
+    "description": "Drain and cordon a GKE node so the scheduler rebalances pods off it. High risk because it removes a node from service; requires human review and a high confidence floor.",
+    "target_services": [
+      "checkout-service",
+      "payment-processor",
+      "store-pos-system",
+      "product-search",
+      "order-fulfilment",
+      "inventory-sync"
+    ],
+    "avg_duration_seconds": 420,
+    "confidence_threshold": 0.9,
+    "parameters": [
+      "node_name",
+      "force"
+    ],
+    "risk_level": "high"
+  },
+  {
+    "uuid": "a1b2c3d4-0009-0001-0001-000000000009",
+    "name": "rotate-service-credentials",
+    "description": "Rotate OAuth tokens and Vault-managed credentials for a service. Restricted to payment-processor by default because of PCI scope; high risk and high confidence floor.",
+    "target_services": [
+      "payment-processor"
+    ],
+    "avg_duration_seconds": 360,
+    "confidence_threshold": 0.85,
+    "parameters": [
+      "service_name",
+      "namespace"
+    ],
+    "risk_level": "high"
+  },
+  {
+    "uuid": "a1b2c3d4-0010-0001-0001-000000000010",
+    "name": "trigger-manual-fulfilment-retry",
+    "description": "Replay queued order-fulfilment dispatches to a specific partner. NEVER automatic — duplicate physical shipments have occurred twice historically. Always human-reviewed.",
+    "target_services": [
+      "order-fulfilment"
+    ],
+    "avg_duration_seconds": 300,
+    "confidence_threshold": 0.95,
+    "parameters": [
+      "partner",
+      "start_time",
+      "end_time"
+    ],
+    "risk_level": "medium",
+    "human_review_required": true
+  }
+]

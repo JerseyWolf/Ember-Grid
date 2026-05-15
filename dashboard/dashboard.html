@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ops-knowledge-loop — Ember Grid</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0d1117;
+            --surface: #161b22;
+            --surface-raised: #21262d;
+            --border: #30363d;
+            --text: #e6edf3;
+            --text-muted: #8b949e;
+            --teal: #4f98a3;
+            --green: #3fb950;
+            --amber: #d29922;
+            --red: #f85149;
+        }
+        html[data-theme="light"] {
+            --bg: #ffffff;
+            --surface: #f6f8fa;
+            --surface-raised: #ffffff;
+            --border: #d0d7de;
+            --text: #1f2328;
+            --text-muted: #656d76;
+            --teal: #01696f;
+            --green: #1a7f37;
+            --amber: #9a6700;
+            --red: #cf222e;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        code, .mono, .kpi-value {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .container {
+            max-width: 1320px;
+            margin: 0 auto;
+            padding: 0 28px 56px;
+        }
+        header.app-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 22px 28px;
+            border-bottom: 1px solid var(--teal);
+            max-width: 1320px;
+            margin: 0 auto;
+        }
+        .brand .title {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 18px;
+        }
+        .brand .subtitle {
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+        .meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .meta .timestamp {
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+        }
+        button.theme-toggle {
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+        }
+        button.theme-toggle:hover { border-color: var(--teal); }
+        h2.section-title {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin: 36px 0 16px;
+            font-weight: 600;
+        }
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+        .kpi-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px 18px 12px;
+        }
+        .kpi-label {
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        .kpi-value {
+            font-size: 36px;
+            margin-top: 8px;
+            font-weight: 700;
+        }
+        .kpi-unit {
+            color: var(--text-muted);
+            font-size: 12px;
+            margin-top: 2px;
+        }
+        .kpi-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+        .trend { font-weight: 700; }
+        .trend-up { color: var(--green); }
+        .trend-down { color: var(--red); }
+        .trend-flat { color: var(--text-muted); }
+        .delta {
+            color: var(--text-muted);
+            background: var(--surface-raised);
+            padding: 2px 8px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+        }
+        .sparkline-wrap { margin-top: 12px; }
+        .sparkline { width: 100%; height: 50px; display: block; }
+        table.pipeline {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        table.pipeline th, table.pipeline td {
+            padding: 10px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+        table.pipeline th {
+            background: var(--surface-raised);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        table.pipeline tr:last-child td { border-bottom: none; }
+        table.pipeline code {
+            background: var(--surface-raised);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .row-success { background: rgba(63, 185, 80, 0.06); }
+        .row-pending { background: rgba(210, 153, 34, 0.07); }
+        .row-failed  { background: rgba(248, 81, 73, 0.07); }
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .status-closed, .status-auto-resolved {
+            background: rgba(63, 185, 80, 0.15);
+            color: var(--green);
+        }
+        .status-pending-review {
+            background: rgba(210, 153, 34, 0.15);
+            color: var(--amber);
+        }
+        .status-failed {
+            background: rgba(248, 81, 73, 0.15);
+            color: var(--red);
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px;
+        }
+        .card h3 {
+            margin: 0 0 12px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .live-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 8px var(--green);
+        }
+        .muted { color: var(--text-muted); }
+        .recent-files {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .recent-files li {
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+        }
+        .recent-files li:last-child { border-bottom: none; }
+        .rag-live {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .rag-live li {
+            padding: 8px 0;
+            border-bottom: 1px dashed var(--border);
+            font-size: 12px;
+        }
+        .rag-live li:last-child { border-bottom: none; }
+        .snippet {
+            display: inline-block;
+            margin-top: 4px;
+            color: var(--text-muted);
+        }
+        .conf-bar-wrap {
+            margin: 10px 0;
+        }
+        .conf-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+        .conf-bar {
+            height: 14px;
+            border-radius: 4px;
+            background: var(--surface-raised);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        .conf-fill {
+            height: 100%;
+            transition: width 800ms ease;
+        }
+        .conf-fill-auto    { background: var(--teal); }
+        .conf-fill-pending { background: var(--amber); }
+        .loop-diagram {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            font-family: 'JetBrains Mono', monospace;
+            white-space: pre;
+            overflow-x: auto;
+            font-size: 13px;
+            line-height: 1.7;
+        }
+        .loop-diagram .step {
+            display: inline-block;
+            padding: 4px 10px;
+            border: 1px solid var(--teal);
+            border-radius: 6px;
+            background: var(--surface-raised);
+        }
+        .loop-diagram .arrow {
+            color: var(--teal);
+        }
+        footer.app-footer {
+            margin-top: 56px;
+            padding: 20px 0;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 12px;
+            text-align: center;
+        }
+        @media (max-width: 960px) {
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header class="app-bar">
+        <div class="brand">
+            <div class="title">ops-knowledge-loop</div>
+            <div class="subtitle">Ember Grid</div>
+        </div>
+        <div class="meta">
+            <span class="timestamp">generated 2026-05-15 09:35 UTC</span>
+            <button class="theme-toggle" id="theme-toggle" type="button">Toggle theme</button>
+        </div>
+    </header>
+
+    <main class="container">
+        <h2 class="section-title">DORA metrics — last 30 days</h2>
+        <section class="kpi-grid">
+            <div class="kpi-card"><div class="kpi-label">MTTR</div><div class="kpi-value" data-target="2.25">2.2</div><div class="kpi-unit">hours</div><div class="kpi-meta"><span class="trend trend-up">▲</span> <span class="delta">-16.3% vs last week</span></div><div class="sparkline-wrap"><svg viewBox="0 0 220 50" preserveAspectRatio="none" class="sparkline"><polyline fill="none" stroke="#4f98a3" stroke-width="1.6" points="4.0,4.0 11.3,12.4 18.6,10.8 25.9,12.6 33.2,8.3 40.6,10.1 47.9,9.2 55.2,19.7 62.5,17.2 69.8,22.8 77.1,22.2 84.4,20.1 91.7,26.9 99.0,26.2 106.3,22.6 113.7,25.1 121.0,30.1 128.3,27.2 135.6,26.0 142.9,36.5 150.2,28.7 157.5,31.2 164.8,36.7 172.1,40.1 179.4,32.4 186.8,40.8 194.1,44.9 201.4,46.0 208.7,39.0 216.0,43.0"/></svg></div></div>
+<div class="kpi-card"><div class="kpi-label">Change Failure Rate</div><div class="kpi-value" data-target="7.49">7.5</div><div class="kpi-unit">%</div><div class="kpi-meta"><span class="trend trend-up">▲</span> <span class="delta">-8.1% vs last week</span></div><div class="sparkline-wrap"><svg viewBox="0 0 220 50" preserveAspectRatio="none" class="sparkline"><polyline fill="none" stroke="#4f98a3" stroke-width="1.6" points="4.0,4.0 11.3,6.3 18.6,10.4 25.9,4.9 33.2,15.1 40.6,13.6 47.9,10.5 55.2,14.9 62.5,12.4 69.8,17.8 77.1,17.1 84.4,28.2 91.7,26.6 99.0,26.8 106.3,31.1 113.7,30.0 121.0,33.2 128.3,31.6 135.6,27.3 142.9,32.6 150.2,33.6 157.5,37.3 164.8,37.5 172.1,28.5 179.4,34.1 186.8,35.7 194.1,43.6 201.4,36.3 208.7,46.0 216.0,43.9"/></svg></div></div>
+<div class="kpi-card"><div class="kpi-label">Deployment Frequency</div><div class="kpi-value" data-target="4.16">4.2</div><div class="kpi-unit">per day</div><div class="kpi-meta"><span class="trend trend-flat">→</span> <span class="delta">-0.3% vs last week</span></div><div class="sparkline-wrap"><svg viewBox="0 0 220 50" preserveAspectRatio="none" class="sparkline"><polyline fill="none" stroke="#4f98a3" stroke-width="1.6" points="4.0,4.5 11.3,19.8 18.6,23.1 25.9,17.6 33.2,11.1 40.6,13.8 47.9,37.8 55.2,46.0 62.5,34.0 69.8,36.2 77.1,38.4 84.4,6.7 91.7,9.5 99.0,34.0 106.3,19.3 113.7,30.2 121.0,7.8 128.3,27.5 135.6,36.2 142.9,36.7 150.2,23.1 157.5,36.2 164.8,22.0 172.1,8.4 179.4,30.2 186.8,37.8 194.1,4.0 201.4,25.3 208.7,43.8 216.0,45.5"/></svg></div></div>
+<div class="kpi-card"><div class="kpi-label">Lead Time</div><div class="kpi-value" data-target="12.62">12.6</div><div class="kpi-unit">hours</div><div class="kpi-meta"><span class="trend trend-up">▲</span> <span class="delta">-9.5% vs last week</span></div><div class="sparkline-wrap"><svg viewBox="0 0 220 50" preserveAspectRatio="none" class="sparkline"><polyline fill="none" stroke="#4f98a3" stroke-width="1.6" points="4.0,9.5 11.3,4.7 18.6,4.0 25.9,9.7 33.2,15.2 40.6,12.7 47.9,6.7 55.2,13.5 62.5,9.5 69.8,12.1 77.1,23.5 84.4,16.3 91.7,18.1 99.0,21.0 106.3,25.5 113.7,22.4 121.0,30.0 128.3,27.4 135.6,28.4 142.9,23.7 150.2,26.0 157.5,34.5 164.8,33.0 172.1,38.1 179.4,30.6 186.8,32.4 194.1,40.5 201.4,37.7 208.7,39.3 216.0,46.0"/></svg></div></div>
+        </section>
+
+        <h2 class="section-title">Pipeline run summary</h2>
+        <table class="pipeline">
+            <thead>
+                <tr>
+                    <th>Incident</th>
+                    <th>Service</th>
+                    <th>Priority</th>
+                    <th>RAG Score</th>
+                    <th>Rundeck Action</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="row-success"><td>INC0043499</td><td>notification-service</td><td>P4</td><td>126 min MTTR</td><td><code>restart-service-rolling</code></td><td><span class="status-badge status-closed">Closed</span></td></tr>
+<tr class="row-success"><td>INC0043498</td><td>pricing-engine</td><td>P3</td><td>—</td><td><code>—</code></td><td><span class="status-badge status-auto-resolved">Auto-Resolved</span></td></tr>
+<tr class="row-success"><td>INC0043497</td><td>inventory-sync</td><td>P2</td><td>88 min MTTR</td><td><code>rollback-to-previous-version</code></td><td><span class="status-badge status-closed">Closed</span></td></tr>
+<tr class="row-pending"><td>INC0043496</td><td>order-fulfilment</td><td>P1</td><td>—</td><td><code>—</code></td><td><span class="status-badge status-pending-review">Pending Review</span></td></tr>
+<tr class="row-success"><td>INC0043495</td><td>product-search</td><td>P4</td><td>50 min MTTR</td><td><code>rollback-to-previous-version</code></td><td><span class="status-badge status-closed">Closed</span></td></tr>
+<tr class="row-success"><td>INC0043494</td><td>payment-processor</td><td>P3</td><td>—</td><td><code>—</code></td><td><span class="status-badge status-auto-resolved">Auto-Resolved</span></td></tr>
+<tr class="row-success"><td>INC0043493</td><td>checkout-service</td><td>P2</td><td>347 min MTTR</td><td><code>—</code></td><td><span class="status-badge status-closed">Closed</span></td></tr>
+<tr class="row-pending"><td>INC0043492</td><td>inventory-sync</td><td>P1</td><td>—</td><td><code>—</code></td><td><span class="status-badge status-pending-review">Pending Review</span></td></tr>
+<tr class="row-success"><td>INC0043491</td><td>order-fulfilment</td><td>P4</td><td>309 min MTTR</td><td><code>—</code></td><td><span class="status-badge status-closed">Closed</span></td></tr>
+<tr class="row-success"><td>INC0043490</td><td>product-search</td><td>P3</td><td>—</td><td><code>—</code></td><td><span class="status-badge status-auto-resolved">Auto-Resolved</span></td></tr>
+            </tbody>
+        </table>
+
+        <h2 class="section-title">RAG knowledge base &amp; confidence distribution</h2>
+        <section class="grid-2">
+            <div class="card">
+                <h3><span class="live-indicator"></span> Knowledge base is live</h3>
+                <p class="muted">Documents indexed: <strong class="mono">13</strong></p>
+                <p class="muted">Last populated: <span class="mono">2026-05-15T09:35:22+00:00</span></p>
+                <p class="muted">Most recently added:</p>
+                <ul class="recent-files">
+                    <li><code>knowledge-base/systems/ember-grid-architecture.md</code></li>
+<li><code>knowledge-base/systems/service-map.md</code></li>
+<li><code>knowledge-base/IMPLEMENTATION_NOTES.md</code></li>
+                </ul>
+                <p class="muted" style="margin-top: 14px;">Live sample for query <code>recent incidents</code>:</p>
+                <ul class='rag-live'>
+<li><code>knowledge-base/runbooks/order-fulfilment.md</code> <span class="muted">(score 0.36)</span><br><span class="snippet">## Post-Incident Checklist  - [ ] All consumers caught up on Kafka lag (&lt; 30 seconds). - [ ] Dispatch success rate back above 99% for 30 min…</span></li>
+<li><code>knowledge-base/runbooks/inventory-sync.md</code> <span class="muted">(score 0.34)</span><br><span class="snippet">## Post-Incident Checklist  - [ ] Last successful sync wrote a non-zero, plausible number of records       (compare against last 7 days&#x27; ave…</span></li>
+<li><code>knowledge-base/runbooks/store-pos-system.md</code> <span class="muted">(score 0.32)</span><br><span class="snippet">## Post-Incident Checklist  - [ ] All `store-pos-system` pods Ready in affected namespace. - [ ] Consul `serfHealth` and the custom HTTP hea…</span></li>
+</ul>
+            </div>
+            <div class="card">
+                <h3>Confidence distribution</h3>
+                <p class="muted">Auto-resolve threshold: 70%.</p>
+                <div class="conf-bar-wrap">
+                    <div class="conf-label">
+                        <span>Auto-resolved (confidence ≥ 70%)</span>
+                        <span><strong>280</strong> &mdash; 46.7%</span>
+                    </div>
+                    <div class="conf-bar"><div class="conf-fill conf-fill-auto" style="width: 46.7%"></div></div>
+                </div>
+                <div class="conf-bar-wrap">
+                    <div class="conf-label">
+                        <span>Pending review (confidence &lt; 70%)</span>
+                        <span><strong>320</strong> &mdash; 53.3%</span>
+                    </div>
+                    <div class="conf-bar"><div class="conf-fill conf-fill-pending" style="width: 53.3%"></div></div>
+                </div>
+                <p class="muted" style="margin-top: 18px;">
+                    Below the threshold, incidents are flagged with full RAG context and LLM
+                    reasoning — the on-call engineer makes the call.
+                </p>
+            </div>
+        </section>
+
+        <h2 class="section-title">The self-improving loop</h2>
+        <div class="loop-diagram">  <span class="step">ServiceNow Incident</span> <span class="arrow">─▶</span> <span class="step">RAG Query</span> <span class="arrow">─▶</span> <span class="step">LLM Recommendation</span>
+                                              <span class="arrow">│</span>
+                                              <span class="arrow">▼</span>
+  <span class="step">Rundeck Execution</span> <span class="arrow">◀─</span> <span class="step">Confidence Gate (≥70%)</span>
+       <span class="arrow">│</span>
+       <span class="arrow">▼</span>
+  <span class="step">Incident Closed</span> <span class="arrow">─▶</span> <span class="step">New Runbook Generated</span> <span class="arrow">─▶</span> <span class="step">RAG Re-indexed</span>
+                                                                            <span class="arrow">│</span>
+                                                                            <span class="arrow">▼</span>
+                                                                       <span class="step">(loop repeats)</span></div>
+
+        <footer class="app-footer">
+            ops-knowledge-loop demonstration — runs offline with MOCK_MODE=true.
+            Set MOCK_MODE=false and populate .env to wire up real ServiceNow, Rundeck and GitHub.
+        </footer>
+    </main>
+
+    <script>
+        (function () {
+            var theme = "dark";
+            var btn = document.getElementById("theme-toggle");
+            btn.addEventListener("click", function () {
+                theme = (theme === "dark") ? "light" : "dark";
+                document.documentElement.setAttribute("data-theme", theme);
+                btn.textContent = (theme === "dark") ? "Toggle theme" : "Toggle theme";
+            });
+
+            function animateCounter(el) {
+                var target = parseFloat(el.getAttribute("data-target"));
+                if (isNaN(target)) return;
+                var duration = 800;
+                var startTime = null;
+                var startVal = 0;
+                function step(ts) {
+                    if (!startTime) startTime = ts;
+                    var progress = Math.min(1, (ts - startTime) / duration);
+                    var current = startVal + (target - startVal) * progress;
+                    el.textContent = (target >= 10) ? current.toFixed(1) : current.toFixed(2);
+                    if (progress < 1) {
+                        requestAnimationFrame(step);
+                    } else {
+                        el.textContent = (target >= 10) ? target.toFixed(1) : target.toFixed(2);
+                    }
+                }
+                requestAnimationFrame(step);
+            }
+            document.querySelectorAll(".kpi-value").forEach(animateCounter);
+        })();
+    </script>
+</body>
+</html>

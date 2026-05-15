@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ops-knowledge-loop — Ember Grid</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0d1117;
+            --surface: #161b22;
+            --surface-raised: #21262d;
+            --border: #30363d;
+            --text: #e6edf3;
+            --text-muted: #8b949e;
+            --teal: #4f98a3;
+            --green: #3fb950;
+            --amber: #d29922;
+            --red: #f85149;
+        }
+        html[data-theme="light"] {
+            --bg: #ffffff;
+            --surface: #f6f8fa;
+            --surface-raised: #ffffff;
+            --border: #d0d7de;
+            --text: #1f2328;
+            --text-muted: #656d76;
+            --teal: #01696f;
+            --green: #1a7f37;
+            --amber: #9a6700;
+            --red: #cf222e;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        code, .mono, .kpi-value {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .container {
+            max-width: 1320px;
+            margin: 0 auto;
+            padding: 0 28px 56px;
+        }
+        header.app-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 22px 28px;
+            border-bottom: 1px solid var(--teal);
+            max-width: 1320px;
+            margin: 0 auto;
+        }
+        .brand .title {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 18px;
+        }
+        .brand .subtitle {
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+        .meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .meta .timestamp {
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+        }
+        button.theme-toggle {
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+        }
+        button.theme-toggle:hover { border-color: var(--teal); }
+        h2.section-title {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin: 36px 0 16px;
+            font-weight: 600;
+        }
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+        .kpi-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px 18px 12px;
+        }
+        .kpi-label {
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        .kpi-value {
+            font-size: 36px;
+            margin-top: 8px;
+            font-weight: 700;
+        }
+        .kpi-unit {
+            color: var(--text-muted);
+            font-size: 12px;
+            margin-top: 2px;
+        }
+        .kpi-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+        .trend { font-weight: 700; }
+        .trend-up { color: var(--green); }
+        .trend-down { color: var(--red); }
+        .trend-flat { color: var(--text-muted); }
+        .delta {
+            color: var(--text-muted);
+            background: var(--surface-raised);
+            padding: 2px 8px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+        }
+        .sparkline-wrap { margin-top: 12px; }
+        .sparkline { width: 100%; height: 50px; display: block; }
+        table.pipeline {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        table.pipeline th, table.pipeline td {
+            padding: 10px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+        table.pipeline th {
+            background: var(--surface-raised);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        table.pipeline tr:last-child td { border-bottom: none; }
+        table.pipeline code {
+            background: var(--surface-raised);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .row-success { background: rgba(63, 185, 80, 0.06); }
+        .row-pending { background: rgba(210, 153, 34, 0.07); }
+        .row-failed  { background: rgba(248, 81, 73, 0.07); }
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .status-closed, .status-auto-resolved {
+            background: rgba(63, 185, 80, 0.15);
+            color: var(--green);
+        }
+        .status-pending-review {
+            background: rgba(210, 153, 34, 0.15);
+            color: var(--amber);
+        }
+        .status-failed {
+            background: rgba(248, 81, 73, 0.15);
+            color: var(--red);
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px;
+        }
+        .card h3 {
+            margin: 0 0 12px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .live-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 8px var(--green);
+        }
+        .muted { color: var(--text-muted); }
+        .recent-files {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .recent-files li {
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+        }
+        .recent-files li:last-child { border-bottom: none; }
+        .rag-live {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .rag-live li {
+            padding: 8px 0;
+            border-bottom: 1px dashed var(--border);
+            font-size: 12px;
+        }
+        .rag-live li:last-child { border-bottom: none; }
+        .snippet {
+            display: inline-block;
+            margin-top: 4px;
+            color: var(--text-muted);
+        }
+        .conf-bar-wrap {
+            margin: 10px 0;
+        }
+        .conf-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+        .conf-bar {
+            height: 14px;
+            border-radius: 4px;
+            background: var(--surface-raised);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        .conf-fill {
+            height: 100%;
+            transition: width 800ms ease;
+        }
+        .conf-fill-auto    { background: var(--teal); }
+        .conf-fill-pending { background: var(--amber); }
+        .loop-diagram {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            font-family: 'JetBrains Mono', monospace;
+            white-space: pre;
+            overflow-x: auto;
+            font-size: 13px;
+            line-height: 1.7;
+        }
+        .loop-diagram .step {
+            display: inline-block;
+            padding: 4px 10px;
+            border: 1px solid var(--teal);
+            border-radius: 6px;
+            background: var(--surface-raised);
+        }
+        .loop-diagram .arrow {
+            color: var(--teal);
+        }
+        footer.app-footer {
+            margin-top: 56px;
+            padding: 20px 0;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 12px;
+            text-align: center;
+        }
+        @media (max-width: 960px) {
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header class="app-bar">
+        <div class="brand">
+            <div class="title">ops-knowledge-loop</div>
+            <div class="subtitle">Ember Grid</div>
+        </div>
+        <div class="meta">
+            <span class="timestamp">generated {{generated_at}}</span>
+            <button class="theme-toggle" id="theme-toggle" type="button">Toggle theme</button>
+        </div>
+    </header>
+
+    <main class="container">
+        <h2 class="section-title">DORA metrics — last 30 days</h2>
+        <section class="kpi-grid">
+            {{kpi_cards}}
+        </section>
+
+        <h2 class="section-title">Pipeline run summary</h2>
+        <table class="pipeline">
+            <thead>
+                <tr>
+                    <th>Incident</th>
+                    <th>Service</th>
+                    <th>Priority</th>
+                    <th>RAG Score</th>
+                    <th>Rundeck Action</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{pipeline_rows}}
+            </tbody>
+        </table>
+
+        <h2 class="section-title">RAG knowledge base &amp; confidence distribution</h2>
+        <section class="grid-2">
+            <div class="card">
+                <h3><span class="live-indicator"></span> Knowledge base is live</h3>
+                <p class="muted">Documents indexed: <strong class="mono">{{rag_total}}</strong></p>
+                <p class="muted">Last populated: <span class="mono">{{rag_last_indexed}}</span></p>
+                <p class="muted">Most recently added:</p>
+                <ul class="recent-files">
+                    {{rag_recent}}
+                </ul>
+                <p class="muted" style="margin-top: 14px;">Live sample for query <code>recent incidents</code>:</p>
+                {{rag_live}}
+            </div>
+            <div class="card">
+                <h3>Confidence distribution</h3>
+                <p class="muted">Auto-resolve threshold: {{confidence_threshold}}%.</p>
+                <div class="conf-bar-wrap">
+                    <div class="conf-label">
+                        <span>Auto-resolved (confidence ≥ {{confidence_threshold}}%)</span>
+                        <span><strong>{{dist_auto}}</strong> &mdash; {{dist_auto_pct}}%</span>
+                    </div>
+                    <div class="conf-bar"><div class="conf-fill conf-fill-auto" style="width: {{dist_auto_pct}}%"></div></div>
+                </div>
+                <div class="conf-bar-wrap">
+                    <div class="conf-label">
+                        <span>Pending review (confidence &lt; {{confidence_threshold}}%)</span>
+                        <span><strong>{{dist_pending}}</strong> &mdash; {{dist_pending_pct}}%</span>
+                    </div>
+                    <div class="conf-bar"><div class="conf-fill conf-fill-pending" style="width: {{dist_pending_pct}}%"></div></div>
+                </div>
+                <p class="muted" style="margin-top: 18px;">
+                    Below the threshold, incidents are flagged with full RAG context and LLM
+                    reasoning — the on-call engineer makes the call.
+                </p>
+            </div>
+        </section>
+
+        <h2 class="section-title">The self-improving loop</h2>
+        <div class="loop-diagram">  <span class="step">ServiceNow Incident</span> <span class="arrow">─▶</span> <span class="step">RAG Query</span> <span class="arrow">─▶</span> <span class="step">LLM Recommendation</span>
+                                              <span class="arrow">│</span>
+                                              <span class="arrow">▼</span>
+  <span class="step">Rundeck Execution</span> <span class="arrow">◀─</span> <span class="step">Confidence Gate (≥{{confidence_threshold}}%)</span>
+       <span class="arrow">│</span>
+       <span class="arrow">▼</span>
+  <span class="step">Incident Closed</span> <span class="arrow">─▶</span> <span class="step">New Runbook Generated</span> <span class="arrow">─▶</span> <span class="step">RAG Re-indexed</span>
+                                                                            <span class="arrow">│</span>
+                                                                            <span class="arrow">▼</span>
+                                                                       <span class="step">(loop repeats)</span></div>
+
+        <footer class="app-footer">
+            ops-knowledge-loop demonstration — runs offline with MOCK_MODE=true.
+            Set MOCK_MODE=false and populate .env to wire up real ServiceNow, Rundeck and GitHub.
+        </footer>
+    </main>
+
+    <script>
+        (function () {
+            var theme = "dark";
+            var btn = document.getElementById("theme-toggle");
+            btn.addEventListener("click", function () {
+                theme = (theme === "dark") ? "light" : "dark";
+                document.documentElement.setAttribute("data-theme", theme);
+                btn.textContent = (theme === "dark") ? "Toggle theme" : "Toggle theme";
+            });
+
+            function animateCounter(el) {
+                var target = parseFloat(el.getAttribute("data-target"));
+                if (isNaN(target)) return;
+                var duration = 800;
+                var startTime = null;
+                var startVal = 0;
+                function step(ts) {
+                    if (!startTime) startTime = ts;
+                    var progress = Math.min(1, (ts - startTime) / duration);
+                    var current = startVal + (target - startVal) * progress;
+                    el.textContent = (target >= 10) ? current.toFixed(1) : current.toFixed(2);
+                    if (progress < 1) {
+                        requestAnimationFrame(step);
+                    } else {
+                        el.textContent = (target >= 10) ? target.toFixed(1) : target.toFixed(2);
+                    }
+                }
+                requestAnimationFrame(step);
+            }
+            document.querySelectorAll(".kpi-value").forEach(animateCounter);
+        })();
+    </script>
+</body>
+</html>
